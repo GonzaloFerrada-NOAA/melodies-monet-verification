@@ -1,0 +1,61 @@
+# Recipe: RRFS-SD native netCDF output (dynfHHH.nc + phyfHHH.nc, merged)
+#
+# Each entry:   name: expression
+#          or   name: {expr: expression, units: ..., long_name: ...}
+# Expressions are Python/xarray; 'np' is available. Names refer to raw variables
+# in either input file or to other entries here. Entries are computed only when
+# a requested species needs them.
+# Species names (keys of 'species' in experiments.yaml) must exist here.
+#
+# FV3 'pfull' runs top -> bottom, so isel(pfull=-1) is the lowest model layer
+# (same as the old 'ncks -d pfull,63,63').
+
+lat: lat                  # raw 2-D latitude / longitude (output dims become y, x)
+lon: lon
+output_format: NETCDF3_64BIT
+chunks: {pfull: 1}        # read 3-D fields one level at a time (low memory)
+
+variables:
+  # ---------------- helpers (lowest model layer) ----------------
+  # Air density, as in Jordan's calculate_rrfs_airdens.ncl at the lowest layer:
+  #   p = psfc - dpres(lowest layer);  rho = p / (Rd * T)
+  dens_sfc:
+    expr: (pressfc - dpres.isel(pfull=-1)) / (287.0 * tmp.isel(pfull=-1))
+    units: kg m-3
+  smoke_sfc:    smoke.isel(pfull=-1) * dens_sfc        # ug/kg * kg/m3 -> ug/m3
+  dust_sfc:     dust.isel(pfull=-1) * dens_sfc
+  coarsepm_sfc: coarsepm.isel(pfull=-1) * dens_sfc
+
+  # ---------------- species ----------------
+  aod550:
+    expr: ext550.sum('pfull', skipna=False)   # column AOD; NaN columns stay NaN (default skipna gives 0)
+    units: "1"
+    long_name: aerosol optical depth at 550 nm
+  pm25:
+    expr: smoke_sfc + dust_sfc
+    units: ug m-3
+    long_name: surface PM2.5
+  pm10:
+    expr: pm25 + coarsepm_sfc
+    units: ug m-3
+    long_name: surface PM10
+  t2m:
+    expr: tmp2m - 273.15
+    units: degC
+    long_name: 2-m temperature
+  td2m:
+    expr: dpt2m - 273.15
+    units: degC
+    long_name: 2-m dew point temperature
+  ws:
+    expr: (ugrd10m**2 + vgrd10m**2)**0.5
+    units: m s-1
+    long_name: 10-m wind speed
+  wd:
+    expr: 180.0 + np.degrees(np.arctan2(ugrd10m, vgrd10m))   # direction FROM
+    units: degree
+    long_name: 10-m wind direction
+  pp1h:
+    expr: 1.e5 * tprcp                 # same conversion as the old ncap2 step
+    units: mm
+    long_name: 1-hr precipitation

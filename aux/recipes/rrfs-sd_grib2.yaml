@@ -1,0 +1,80 @@
+# Recipe: RRFS-SD GRIB2 output (rrfs.tCCz.2dfld.3km.fHHH.na.grib2)
+#
+# fields:    raw 2-D GRIB2 records, picked by a regex on the 'wgrib2 -s' inventory.
+#            Each must match exactly ONE record. Test with grep -E (extended
+#            regex, needed for ( | ) +), replacing {lead} by a real hour:
+#              wgrib2 file.grib2 -s | grep -E 'pattern'
+#            {lead} / {lead_m1} -> forecast hour / hour-1.
+#            optional: true -> NaN field if no record matches.
+# variables: same as netCDF recipes (python/xarray expressions on fields,
+#            other entries, and np). Species names = keys of 'species' in
+#            experiments.yaml.
+
+lat: lat                  # provided by the GRIB2 reader (output dims become y, x)
+lon: lon
+output_format: NETCDF3_64BIT
+
+fields:
+  aotk:        ':AOTK:'
+  # Instantaneous 8-m mass density [kg m-3]. [^:]* = 'NN hour fcst' or 'anl'.
+  # Must start at ':MASSDEN:8 m above ground:' to exclude COLMD/AEMFLX and the
+  # 'Total aerosol' hourly averages.
+  smoke_raw:   ':MASSDEN:8 m above ground:[^:]*:aerosol=Particulate organic matter dry:aerosol_size <2.5e-06'
+  dust_fine:   ':MASSDEN:8 m above ground:[^:]*:aerosol=Dust dry:aerosol_size <2.5e-06'
+  dust_coarse: ':MASSDEN:8 m above ground:[^:]*:aerosol=Dust dry:aerosol_size >=2.5e-06'
+  u10:         ':UGRD:10 m above ground:'
+  v10:         ':VGRD:10 m above ground:'
+  t2:          ':TMP:2 m above ground:'
+  dpt2:        ':DPT:2 m above ground:'
+  vis_raw:     ':VIS:surface:'
+  ceil_raw:    ':HGT:cloud ceiling:'
+  dswrf_raw:   ':DSWRF:surface:([0-9]+ hour fcst|anl):'   # instantaneous, not the average
+  apcp1h:
+    match:    ':APCP:surface:{lead_m1}-{lead} hour acc'   # last-hour accumulation
+    optional: true                                        # none at f000
+
+variables:
+  aod550:
+    expr: aotk
+    units: "1"
+    long_name: aerosol optical depth at 550 nm
+  pm25:
+    expr: 1.e9 * (smoke_raw + dust_fine)          # kg m-3 -> ug m-3
+    units: ug m-3
+    long_name: PM2.5 at 8 m AGL
+  pm10:
+    expr: pm25 + 1.e9 * dust_coarse
+    units: ug m-3
+    long_name: PM10 at 8 m AGL
+  t2m:
+    expr: t2 - 273.15
+    units: degC
+    long_name: 2-m temperature
+  td2m:
+    expr: dpt2 - 273.15
+    units: degC
+    long_name: 2-m dew point temperature
+  ws:
+    expr: (u10**2 + v10**2)**0.5
+    units: m s-1
+    long_name: 10-m wind speed
+  wd:
+    expr: 180.0 + np.degrees(np.arctan2(u10, v10))   # direction FROM
+    units: degree
+    long_name: 10-m wind direction
+  pp1h:
+    expr: apcp1h                                  # kg m-2 = mm
+    units: mm
+    long_name: 1-hr precipitation
+  vis:
+    expr: (0.000621371 * vis_raw).clip(max=10.0)  # m -> miles, capped at 10
+    units: mile
+    long_name: surface visibility
+  ceiling:
+    expr: ceil_raw
+    units: m
+    long_name: cloud ceiling height
+  dswrf:
+    expr: dswrf_raw
+    units: W m-2
+    long_name: surface downward shortwave radiation

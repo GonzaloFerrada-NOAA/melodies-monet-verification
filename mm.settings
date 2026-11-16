@@ -1,0 +1,88 @@
+#!/bin/bash
+# mm.settings -- shared environment for MELODIES-MONET tasks.
+# Usage: source this file; do not execute it.
+[[ "${BASH_SOURCE[0]}" == "$0" ]] && { echo "mm.settings must be sourced, not executed" >&2; exit 1; }
+
+# Export VAR=default only if VAR is unset/empty; otherwise keep caller's value
+_mm_default() {
+  local var=$1 val=$2
+  if [[ -z ${!var:-} ]]; then                # ${!var} = indirect expansion (value of the var named in $var)
+    export "${var}=${val}"
+    echo "settings: ${var}=${val}" >&2       # log to stderr, not stdout
+  else
+    export "${var}"                          # make sure an inherited value is exported too
+  fi
+}
+
+# ---- Python environment ----
+# _mm_default CONDA_ENV   "/scratch4/BMC/acomp/cheMPAS-Fire/envs/melodies-monet-nrt-vx"
+_mm_default CONDA_ENV       "/scratch3/BMC/gsd-fv3-dev/Gonzalo.Ferrada/.HOME/miniconda-ursa/envs/melodies-monet"
+_mm_default PYTHON          "${CONDA_ENV}/bin/python"
+_mm_default SRUN_PYTHON     "srun --export=ALL --ntasks=1 --cpus-per-task=1 --mem=0 ${CONDA_ENV}/bin/python -u"
+_mm_default MM_BIN          "${CONDA_ENV}/bin/melodies-monet"
+_mm_default PARALLEL_BIN    "${CONDA_ENV}/bin/parallel"
+
+# ---- Workflow directories (order matters: children derive from parents) ----
+_mm_default MELODIES_MONET_DIR  "/scratch3/BMC/acomp/Gonzalo.Ferrada/repo-verif/melodies-monet-offline"
+_mm_default SCRIPTS_DIR         "${MELODIES_MONET_DIR}/scripts"
+_mm_default USH_DIR             "${MELODIES_MONET_DIR}/ush"
+_mm_default TOOLS_DIR           "${MELODIES_MONET_DIR}/tools"
+_mm_default AUX_DIR             "${MELODIES_MONET_DIR}/aux"
+_mm_default YAML_DIR            "${USH_DIR}/yaml_templates"
+_mm_default OBS_DIR             "${MELODIES_MONET_DIR}/obs"
+_mm_default OUTPUT_DIR          "${MELODIES_MONET_DIR}/output"
+_mm_default PLOT_OUTPUT_DIR     "${OUTPUT_DIR}/figures"
+_mm_default RUN_DIR             "${MELODIES_MONET_DIR}/run"
+_mm_default TOWEB_DIR           "${MELODIES_MONET_DIR}/toweb"
+
+# ---- Input datasets (overridable for testing) ----
+_mm_default DIR_HMS_TXT         "/scratch4/BMC/public/data/grids/nesdis/hms_fire/text"
+_mm_default DIR_HMS_KML         "/scratch4/BMC/public/data/grids/nesdis/hms_smoke/kml"
+_mm_default DIR_VIIRS_L2        "/scratch4/BMC/public/data/sat/nesdis/viirs/aod/conus"
+_mm_default DIR_VIIRS_L3        "/public/data/sat/nesdis/viirs_level3/aod/eps"
+_mm_default DIR_TEMPO_L2        "/public/data/grids/nesdis/tempo_aod"
+_mm_default DIR_TROPOMI         "/scratch4/BMC/public/data/sat/sentinel-5p/L2"
+_mm_default DIR_RRFSV1_GRIB     "/public/data/grids/rrfs_v1.0"
+_mm_default DIR_CHEMPASFIRE_NC  "/home/Jordan.Schnell/mpas_aerosols_jet"
+_mm_default DIR_FWNEST_NC       "/scratch3/BMC/wrfruc/mpas/fire/fwx1.25km/stmp"
+_mm_default DIR_UFSCHEM_GRIB    "/scratch3/BMC/gsd-fv3/rtruns/UFS-Chem/FV3GFSrun/rt_hr3-chem"
+
+# ---- Cycle date (CDATE = YYYYMMDDHH) ----
+source "${TOOLS_DIR}/workflow_tools.sh"
+source "${TOOLS_DIR}/yaml_helpers.sh"
+
+: "${CDATE:?CDATE not set (expected YYYYMMDDHH)}"
+set_date_vars "${CDATE}"        # YYYYMMDD, YYYY, YY, MM, DD, HH, JJJ, CYCLE_DATE
+
+# ---- Options ----
+_mm_default VIIRS_PLOT_INCLUDE_COLORBAR true
+
+# ---- Modules (load BEFORE set -x, or Lmod floods the log with trace lines) ----
+# Batch shells may not have the `module` function defined; initialize it if missing
+if ! type module &>/dev/null; then
+  source /etc/profile.d/modules.sh        # check the actual init file on Ursa/Hera (see note below)
+fi
+
+module purge
+module load rdhpcs-conda
+module load cdo eccodes/2.34.0
+# module load cdo
+module load nco
+module load ncl
+module load imagemagick
+module load wgrib2
+
+module list
+
+conda activate "${CONDA_ENV}"
+
+unset -f _mm_default                         # don't leak the helper into the caller
+
+
+
+# ---- Shell behavior for the calling task script ----
+set -e                                            # exit on first failing command
+export PS4='+ [\D{%F %T}] ${BASH_SOURCE##*/}:${LINENO}: '   # timestamp, file name, line number
+set -x                                            # trace each command from here on
+
+return 0

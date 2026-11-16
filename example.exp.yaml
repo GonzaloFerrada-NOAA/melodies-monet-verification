@@ -1,0 +1,87 @@
+rrfs-grib2:
+  raw_output_directory: '/public/data/grids/rrfs_v1.0/rrfs.{init?fmt=%Y%m%d}/{init?fmt=%H}'
+  raw_output_filenames: 'rrfs.t{init?fmt=%H}z.2dfld.3km.f{lead?fmt=%3H}.na.grib2'
+  raw_output_format: 'grib2'  # 'grib2' or 'netcdf'
+  model_name: 'RRFS-SD' # 'RRFS-SD' 'cheMPAS-Fire' 'FWx-nest' 'HRRR-Smoke' 'MPAS-Aerosols' 'GEFS-Aerosols' 'UFS-Chem'
+  model_type: 'standard' # 'standard', 'hrrr', 'rrfs', 'ufs', 'wrfchem'
+  initialization_hr: 0
+  simulation_length_hr: 48
+  output_interval_hr: 1
+  relative_day_to_obs: 0 # if retro, then 0
+  # Plot line settings:
+  color: 'red'
+  marker: 'x'
+  linestyle: '-'
+  markersize: 8
+  linewidth: 1.5
+  # species mapping [name in model] : [key name in melodies-monet]
+  species:
+    aod550: "aod_550nm"
+    pm25: "PM2.5"
+    pm10: "P10"
+    t2m: "temp"
+    td2m: "dew_pt_temp"
+    ws: "ws"
+    wd: "wdir"
+    pp1h: "precip_1hr"
+    vis: "vsb"
+    ceiling: "ceiling"
+
+rrfs-netcdf:
+  raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/stmp/{init?fmt=%Y%m%d%H}/fcst_fv3lam'
+  raw_output_filenames: 'dynf{lead?fmt=%3H}.nc phyf{lead?fmt=%3H}.nc'
+  raw_output_format: 'netcdf'  # 'grib2' or 'netcdf'
+  model_name: 'RRFS-SD' # 'RRFS-SD' 'cheMPAS-Fire' 'FWx-nest' 'HRRR-Smoke' 'MPAS-Aerosols' 'GEFS-Aerosols' 'UFS-Chem'
+  model_type: 'hrrr' # 'standard', 'hrrr', 'rrfs', 'ufs', 'wrfchem'
+  initialization_hr: 0
+  simulation_length_hr: 72
+  output_interval_hr: 1
+  relative_day_to_obs: 0 # if retro, then 0
+  # Plot line settings:
+  color: 'red'
+  marker: 'x'
+  linestyle: '-'
+  markersize: 8
+  linewidth: 1.5
+  # species mapping [name in model] : [key name in melodies-monet]
+  species:
+    aod550: "aod_550nm"
+    pm25: "PM2.5"
+    pm10: "P10"
+    t2m: "temp"
+    td2m: "dew_pt_temp"
+    ws: "ws"
+    wd: "wdir"
+    pp1h: "precip_1hr"
+    
+mpas_plumerise:
+  raw_output_directory: '/full/path/to/raw/outputs' 
+  raw_output_format: 'netcdf'  # 'grib2' or 'netcdf'
+  raw_output_filenames: 'mpassit_{valid?fmt=%Y-%m-%d_%H}.00.00.nc'
+  model_name: 'cheMPAS-Fire' # 'RRFS-SD' 'cheMPAS-Fire' 'FWx-nest' 'HRRR-Smoke' 'MPAS-Aerosols' 'GEFS-Aerosols' 'UFS-Chem'
+  model_type: 'standard' # 'standard', 'hrrr', 'rrfs', 'ufs', 'wrfchem'
+  initialization_hr: 0
+  simulation_length_hr: 72
+  output_interval_hr: 1
+  relative_day_to_obs: 0 # if retro, then 0
+  # Plot line settings:
+  color: 'red'
+  marker: 'x'
+  linestyle: '-'
+  markersize: 8
+  linewidth: 1.5
+  # species mapping [name in model] : [key name in melodies-monet]
+  species:
+    aod550: "aod_550nm"
+    pm25: "PM2.5"
+    pm10: "P10"
+    co: "CO"
+    o3: "O3"
+    nox: "NOx"
+    t2m: "temp"
+    td2m: "dew_pt_temp"
+    ws: "ws"
+    wd: "wdir"
+    pp1h: "precip_1hr"
+    vis: "vsb"
+    ceiling: "ceiling"

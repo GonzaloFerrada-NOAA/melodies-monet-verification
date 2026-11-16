@@ -1,0 +1,27 @@
+rrfs-netcdf:
+  raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/stmp/{init?fmt=%Y%m%d%H}/fcst_fv3lam'
+  raw_output_filenames: 'dynf{lead?fmt=%3H}.nc phyf{lead?fmt=%3H}.nc'
+  raw_output_format: 'netcdf'  # 'grib2' or 'netcdf'
+  model_name: 'RRFS-SD' # 'RRFS-SD' 'cheMPAS-Fire' 'FWx-nest' 'HRRR-Smoke' 'MPAS-Aerosols' 'GEFS-Aerosols' 'UFS-Chem'
+  model_type: 'hrrr' # 'standard', 'hrrr', 'rrfs', 'ufs', 'wrfchem'
+  initialization_hr: 0
+  simulation_length_hr: 72
+  output_interval_hr: 1
+  relative_day_to_obs: 0 # if retro, then 0
+  # Plot line settings:
+  color: 'red'
+  marker: 'x'
+  linestyle: '-'
+  markersize: 8
+  linewidth: 1.5
+  # species mapping [name in model] : [key name in melodies-monet]
+  species:
+    aod550: "aod_550nm"
+    pm25: "PM2.5"
+    pm10: "P10"
+    t2m: "temp"
+    td2m: "dew_pt_temp"
+    ws: "ws"
+    wd: "wdir"
+    pp1h: "precip_1hr"
+   
