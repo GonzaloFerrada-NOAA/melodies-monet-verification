@@ -4,9 +4,9 @@ analysis:
   end_time: '@END_TIME@'
   output_dir: @OUTPUT_DIR@
   output_dir_save: @OUTPUT_DIR@
-  #save:
-    #paired:
-      #method: 'netcdf'
-      #prefix: @START_TIME@
-      #data: 'all'
+  save:
+    paired:
+      method: 'netcdf'
+      prefix: @SAVE_PREFIX@
+      data: 'all'
   debug: True

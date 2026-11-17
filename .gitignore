@@ -1,0 +1,6 @@
+.*
+obs
+output
+*.db
+*__*
+logs

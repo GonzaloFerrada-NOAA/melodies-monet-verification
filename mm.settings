@@ -31,21 +31,9 @@ _mm_default AUX_DIR             "${MELODIES_MONET_DIR}/aux"
 _mm_default YAML_DIR            "${USH_DIR}/yaml_templates"
 _mm_default OBS_DIR             "${MELODIES_MONET_DIR}/obs"
 _mm_default OUTPUT_DIR          "${MELODIES_MONET_DIR}/output"
-_mm_default PLOT_OUTPUT_DIR     "${OUTPUT_DIR}/figures"
 _mm_default RUN_DIR             "${MELODIES_MONET_DIR}/run"
 _mm_default TOWEB_DIR           "${MELODIES_MONET_DIR}/toweb"
-
-# ---- Input datasets (overridable for testing) ----
-_mm_default DIR_HMS_TXT         "/scratch4/BMC/public/data/grids/nesdis/hms_fire/text"
-_mm_default DIR_HMS_KML         "/scratch4/BMC/public/data/grids/nesdis/hms_smoke/kml"
-_mm_default DIR_VIIRS_L2        "/scratch4/BMC/public/data/sat/nesdis/viirs/aod/conus"
-_mm_default DIR_VIIRS_L3        "/public/data/sat/nesdis/viirs_level3/aod/eps"
-_mm_default DIR_TEMPO_L2        "/public/data/grids/nesdis/tempo_aod"
-_mm_default DIR_TROPOMI         "/scratch4/BMC/public/data/sat/sentinel-5p/L2"
-_mm_default DIR_RRFSV1_GRIB     "/public/data/grids/rrfs_v1.0"
-_mm_default DIR_CHEMPASFIRE_NC  "/home/Jordan.Schnell/mpas_aerosols_jet"
-_mm_default DIR_FWNEST_NC       "/scratch3/BMC/wrfruc/mpas/fire/fwx1.25km/stmp"
-_mm_default DIR_UFSCHEM_GRIB    "/scratch3/BMC/gsd-fv3/rtruns/UFS-Chem/FV3GFSrun/rt_hr3-chem"
+_mm_default CARTOPY_DATA_DIR    "${AUX_DIR}/cartopy"     # pre-downloaded Natural Earth data (tools/setup_offline_data.sh)
 
 # ---- Cycle date (CDATE = YYYYMMDDHH) ----
 source "${TOOLS_DIR}/workflow_tools.sh"

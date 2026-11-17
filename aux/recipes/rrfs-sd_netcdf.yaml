@@ -56,6 +56,6 @@ variables:
     units: degree
     long_name: 10-m wind direction
   pp1h:
-    expr: 1.e5 * tprcp                 # same conversion as the old ncap2 step
+    expr: 1.e5 * tprcp
     units: mm
     long_name: 1-hr precipitation

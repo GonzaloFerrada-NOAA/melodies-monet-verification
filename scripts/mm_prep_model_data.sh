@@ -33,7 +33,7 @@ if [[ -z ${recipe} ]]; then
   shopt -s nocasematch                                # case insensitive
   case "${model_name}" in
     rrfs-sd|rrfs|rrfsv1)                                    base=rrfs-sd ;;
-    mpas-aerosols|chempas-fire|cmf|fire-weather-nest|fwx-nest|fwxnest) base=mpas-aerosols ;;
+    mpas-aerosols|chempas-fire|cmf|fire-weather-nest|fwx-nest|fwxnest) base=mpas ;;
     hrrr-smoke)                                             base=hrrr-smoke ;;
     gefs-aerosols|gcafs|ufs-aerosols)                       base=gefs-aerosols ;;
     rap-smoke|rap-chem)                                     base=rap-chem ;;
@@ -57,14 +57,14 @@ read -ra templates <<< "${raw_output_filenames}"
 jobs="${frames_dir}/jobs.txt"
 : > "${jobs}"
 for (( lead=0; lead<=simulation_length_hr; lead+=output_interval_hr )); do
-  inputs=()
-  for tpl in "${templates[@]}"; do
-    f=$(fill_template "${raw_output_directory}/${tpl}" "${CDATE}" "${lead}")
-    isfile "${f}"
-    inputs+=("${f}")
-  done
-  printf -v out '%s/frame_f%03d.nc' "${frames_dir}" "${lead}"   # zero-padded -> sorted glob
-  printf '%s\t%s\t%d\n' "${out}" "$(IFS=,; echo "${inputs[*]}")" "${lead}" >> "${jobs}"
+    inputs=()
+    for tpl in "${templates[@]}"; do
+        f=$(fill_template "${raw_output_directory}/${tpl}" "${CDATE}" "${lead}")
+        isfile "${f}"
+        inputs+=("${f}")
+    done
+    printf -v out '%s/frame_f%03d.nc' "${frames_dir}" "${lead}"   # zero-padded -> sorted glob
+    printf '%s\t%s\t%d\n' "${out}" "$(IFS=,; echo "${inputs[*]}")" "${lead}" >> "${jobs}"
 done
 
 # ---------------------------------------------------------------------------

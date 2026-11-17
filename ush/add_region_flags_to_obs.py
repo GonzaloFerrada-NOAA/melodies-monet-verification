@@ -25,12 +25,10 @@ with xr.open_dataset(fin) as ds:
 dims = ds["siteid"].dims                             # flags follow siteid's shape
 lon = ds["longitude"].values
 lat = ds["latitude"].values
+conus = (lon >= -125.0) & (lon <= -67.0) & (lat >= 25.0) & (lat <= 49.0)
 
 ds["westoreastof97"] = (dims, np.where(lon <= -97.0, "west", "east"))
-
-if dataset == "ish-lite":
-    conus = (lon >= -125.0) & (lon <= -67.0) & (lat >= 25.0) & (lat <= 49.0)
-    ds["isinconus"] = (dims, np.where(conus, "CONUS", "NOCON"))
+ds["isinconus"] = (dims, np.where(conus, "CONUS", "NOCON"))
 
 # Write to a temp file, then replace the original
 tmp = fin + ".tmp"

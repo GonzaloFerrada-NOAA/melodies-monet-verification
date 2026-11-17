@@ -44,6 +44,7 @@ while IFS= read -r EXP; do
 done < <(yaml_experiments "${YAML}")
 
 # Ready to plot
+DATE_END=$( date -ud "${CYCLE_DATE} ${MAX_SIM_LENGTH} hours" "+%F %T" )
 ${SRUN_PYTHON} ${USH_DIR}/satellite_aod_verification.py --make-figure \
     --obs-name      "${DATASET}"        \
     --date-start    "${DATE_START}"     \

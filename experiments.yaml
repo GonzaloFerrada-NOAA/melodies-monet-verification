@@ -10,7 +10,7 @@ rrfs-netcdf:
   relative_day_to_obs: 0 # if retro, then 0
   # Plot line settings:
   color: 'red'
-  marker: 'x'
+  marker: '.'
   linestyle: '-'
   markersize: 8
   linewidth: 1.5

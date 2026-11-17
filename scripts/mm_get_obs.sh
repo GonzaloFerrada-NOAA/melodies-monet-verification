@@ -22,14 +22,15 @@ set_prev_dates
 set_date_vars "$(shift_cdate "${CDATE}" +${max_sim_len_days})" _END
 
 
-WORKDIR="${OBS_DIR}/${CDATE}"
+# WORKDIR="${OBS_DIR}/${CDATE}"
+WORKDIR="${OBS_DIR}"
 ismkdir "${WORKDIR}"
 cd "${WORKDIR}"
 
 #--------------------------------------------------
 # SURFRAD  ----------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "surfrad" ]]; then
+if [[ "${DATASET}" == "surfrad" ]]; then
     baseurl="https://gml.noaa.gov/aftp/data/radiation/surfrad/realtime"
     declare -a sites=("bon" "dra" "fpk" "gwn" "psu" "red" "rut" "slv" "sxf" "tbl" "was")
     for isite in "${sites[@]}"
@@ -43,7 +44,7 @@ fi
 #--------------------------------------------------
 # AERONET  ----------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "aeronet" ]]; then
+if [[ "${DATASET}" == "aeronet" ]]; then
     file="AERONET_L15_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
     fout="aeronet.${YYYYMMDD}.nc"
     rm -f ${file}
@@ -60,7 +61,7 @@ fi
 #--------------------------------------------------
 # AIRNOW  -----------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "airnow" ]]; then
+if [[ "${DATASET}" == "airnow" ]]; then
     file="AirNow_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
     fout="airnow.${YYYYMMDD}.nc"
     rm -f ${file}
@@ -104,7 +105,7 @@ fi
 #--------------------------------------------------
 # ISH-LITE  ---------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "ish-lite" ]]; then
+if [[ "${DATASET}" == "ish-lite" ]]; then
     rm -f test5.ish-lite*.nc
     file="ISH-Lite_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
     ${MM_BIN} get-ish-lite -s ${DATEF_PREV} -e ${DATEF_END} -n 12 --box 0 -179 90 -50 --debug --verbose --no-compress
@@ -124,7 +125,7 @@ fi
 #--------------------------------------------------
 # ISH (visibility, cloud ceilin)  -----------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "ish" ]]; then
+if [[ "${DATASET}" == "ish" ]]; then
     rm -f test5.ish.*.nc
     file="ISH_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
     ${MM_BIN} get-ish -s ${DATEF_PREV} -e ${DATEF_END} --box 0 -179 90 -50 -n 12 --no-compress --verbose --debug
@@ -144,7 +145,7 @@ fi
 #--------------------------------------------------
 # OPEN-AQ  ----------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "openaq" ]]; then
+if [[ "${DATASET}" == "openaq" ]]; then
     rm -f test5.openaq.*.nc
     export MM_LOGGING_LEVEL=debug
     # export OPENAQ_API_KEY=dff4aa0d178fdb763b65d72ed81f21da28de5907a9a2f74bd7bbf85d2cbeb98d   # noaa
@@ -168,7 +169,7 @@ fi
 #--------------------------------------------------
 # HMS FIRE/SMOKE  ---------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "hms" ]]; then
+if [[ "${DATASET}" == "hms" ]]; then
     
     [[ ${YYYYMMDD} -lt 20030401 ]] && echo "ERROR: No HMS data available before 2003-04-01. Aborting" && exit 1
     
@@ -186,7 +187,7 @@ fi
 #--------------------------------------------------
 # MODIS  ------------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "modis_aqua" ]]; then
+if [[ "${DATASET}" == "modis_aqua" ]]; then
     hsi get -N /BMC/fdr/Permanent/${YYYY_PREV}/${MM_PREV}/${DD_PREV}/data/sat/nasa/modis/aerosol/${YYYY_PREV}${MM_PREV}${DD_PREV}0000.zip .
     hsi get -N /BMC/fdr/Permanent/${YYYY}/${MM}/${DD}/data/sat/nasa/modis/aerosol/${YYYYMMDD}0000.zip .
     hsi get -N /BMC/fdr/Permanent/${YYYY_END}/${MM_END}/${DD_END}/data/sat/nasa/modis/aerosol/${YYYY_END}${MM_END}${DD_END}0000.zip .
@@ -206,7 +207,7 @@ if [[ "${OBSTYPE}" == "modis_aqua" ]]; then
     done
 fi
 
-if [[ "${OBSTYPE}" == "modis_terra" ]]; then
+if [[ "${DATASET}" == "modis_terra" ]]; then
     hsi get -N /BMC/fdr/Permanent/${YYYY_PREV}/${MM_PREV}/${DD_PREV}/data/sat/nasa/modis/aerosol/${YYYY_PREV}${MM_PREV}${DD_PREV}0000.zip .
     hsi get -N /BMC/fdr/Permanent/${YYYY}/${MM}/${DD}/data/sat/nasa/modis/aerosol/${YYYYMMDD}0000.zip .
     hsi get -N /BMC/fdr/Permanent/${YYYY_END}/${MM_END}/${DD_END}/data/sat/nasa/modis/aerosol/${YYYY_END}${MM_END}${DD_END}0000.zip .
@@ -229,7 +230,7 @@ fi
 #--------------------------------------------------
 # TROPOMI  ----------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "tropomi" ]]; then
+if [[ "${DATASET}" == "tropomi" ]]; then
     ln -s ${DIR_TROPOMI}/NO2/* .
     ln -s ${DIR_TROPOMI}/CO/* .
     ln -s ${DIR_TROPOMI}/HCHO/* .
@@ -238,7 +239,7 @@ fi
 #--------------------------------------------------
 # VIIRS  ------------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "viirs" ]]; then
+if [[ "${DATASET}" == "viirs" ]]; then
     VIIRSDIR="${WORKDIR}/viirs"
     ismkdir "${VIIRSDIR}"
     GCS="https://storage.googleapis.com"
@@ -308,7 +309,7 @@ fi
 #--------------------------------------------------
 # TEMPO  ------------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "tempo" ]]; then
+if [[ "${DATASET}" == "tempo" ]]; then
     TEMPODIR="${OBS_DIR}/${CDATE}/tempo"
     ZIPDIR="${TEMPODIR}/zip"
     mkdir -p "${ZIPDIR}"
@@ -366,14 +367,14 @@ fi
 
 
 
-# if [[ "${OBSTYPE}" == "tempo" ]]; then
+# if [[ "${DATASET}" == "tempo" ]]; then
 
 # fi
 
 #--------------------------------------------------
 # PollenSense  ------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "PollenSense" ]]; then
+if [[ "${DATASET}" == "PollenSense" ]]; then
     # Because the PollenSense data changes from obs to forecast, we grab the data
     # two days earlier than other data
     APIKEY=j3xWLmABCaI9cn9PoDyqkXLktPW1mohpDF10v0FBKdxYdsl6Z7kOy8ref9PBn9kD1128e6aisl3TABkoY7Fy3O
@@ -432,7 +433,7 @@ fi
 #--------------------------------------------------
 # Google Pollen  ----------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "Google_Pollen" ]]; then
+if [[ "${DATASET}" == "Google_Pollen" ]]; then
     scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/google_pollen/${YYYYMMDD}00/TRE_google_${YYYYMMDD}.png .
     scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/google_pollen/${YYYYMMDD}00/GRA_google_${YYYYMMDD}.png .
     scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/google_pollen/${YYYYMMDD}00/WEE_google_${YYYYMMDD}.png .
@@ -442,7 +443,7 @@ fi
 #--------------------------------------------------
 # Pollen.com  -------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "pollen_dot_com" ]]; then
+if [[ "${DATASET}" == "pollen_dot_com" ]]; then
     wget https://pollenapps.com/DF/pollen/map/pollenmapvideo.mp4
     python ${SCRIPTS_DIR}/convert_mp4_to_images.py ${WORKDIR}
 fi
@@ -450,7 +451,7 @@ fi
 #--------------------------------------------------
 # Pollen  -----------------------------------------
 #--------------------------------------------------
-if [[ "${OBSTYPE}" == "NAB_POLLEN" ]]; then
+if [[ "${DATASET}" == "NAB_POLLEN" ]]; then
     scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/nab_pollen/${YYYYMMDD}00/scraped_pollen_data_${YYYYMMDD}.csv .
     cp scraped_pollen_data_${YYYYMMDD}.csv ../scraped_pollen/scraped_pollen_data_${YYYYMMDD}.csv
 fi
