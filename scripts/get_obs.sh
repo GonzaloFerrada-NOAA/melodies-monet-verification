@@ -3,8 +3,6 @@
 source mm.settings
 YAML="${MELODIES_MONET_DIR}/experiments.yaml"
 
-# conda activate ${CONDA_ENV}
-
 # Determine the maximum simulation_length_hr from the experiments:
 max_sim_len=0
 while IFS= read -r exp; do
@@ -301,8 +299,8 @@ if [[ "${DATASET}" == "viirs" ]]; then
         --file-out "${file}" \
         --qcall-threshold 0
     checkstatus
-    isfile "${file}" "${WORKDIR}/viirs_${YYYYMMDD}.nc"
-    ln -sf ${file} 
+    isfile "${file}" 
+    ln -sf ${file} "${WORKDIR}/viirs_${YYYYMMDD}.nc"
     exit 0
 fi
 
@@ -358,6 +356,7 @@ if [[ "${DATASET}" == "tempo" ]]; then
     
     checkstatus
     isfile "${file}"
+    ln -sf ${file} "${WORKDIR}/tempo_${YYYYMMDD}.nc"
     exit 0
     
 fi

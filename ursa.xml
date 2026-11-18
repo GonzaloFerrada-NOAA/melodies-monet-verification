@@ -13,22 +13,18 @@
 <!ENTITY RESERVATION_MEDMEM "<native>--mail-type=NONE</native><queue>&QUEUE;</queue><account>&ACCOUNT;</account><partition>&PARTITION;</partition>">
 <!ENTITY RESERVATION_BIGMEM "<native>--mail-type=NONE</native><queue>&QUEUE;</queue><account>&ACCOUNT;</account><partition>&PARTITION;</partition>">
 
-<!ENTITY JOIN_RESOURCES_LONG    "<walltime>12:00:00</walltime><memory>20G</memory><cores>1</cores>">
-<!ENTITY JOIN_RESOURCES         "<walltime>08:00:00</walltime><memory>20G</memory><cores>1</cores>">
-<!ENTITY JOIN_RESOURCES_SHORT   "<walltime>04:00:00</walltime><memory>40G</memory><cores>1</cores>">
-<!ENTITY JOIN_RESOURCES_SHORTER "<walltime>02:00:00</walltime><memory>20G</memory><cores>1</cores>">
-<!ENTITY JOIN_RESOURCES_SHORTEST "<walltime>01:00:00</walltime><memory>80G</memory><cores>1</cores>">
-<!ENTITY JOIN_RESOURCES_PREP    "<walltime>01:00:00</walltime><memory>250G</memory><nodes>1:ppn=25</nodes>">
-<!ENTITY JOIN_RESOURCES_MEDMEM  "<walltime>03:00:00</walltime><memory>64G</memory><cores>1</cores>">
-<!ENTITY JOIN_RESOURCES_BIGMEM  "<walltime>07:00:00</walltime><memory>80G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES_LONG        "<walltime>12:00:00</walltime><memory>20G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES             "<walltime>08:00:00</walltime><memory>20G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES_SHORT       "<walltime>04:00:00</walltime><memory>40G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES_SHORTER     "<walltime>02:00:00</walltime><memory>20G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES_SHORTEST    "<walltime>01:00:00</walltime><memory>80G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES_PREP        "<walltime>01:00:00</walltime><memory>250G</memory><nodes>1:ppn=25</nodes>">
+<!ENTITY JOIN_RESOURCES_MEDMEM      "<walltime>03:00:00</walltime><memory>64G</memory><cores>1</cores>">
+<!ENTITY JOIN_RESOURCES_BIGMEM      "<walltime>07:00:00</walltime><memory>80G</memory><cores>1</cores>">
 
-<!-- EDIT THESE ENTITIES FOR YOU EXPERIMENT --> 
 <!ENTITY MELODIES_MONET_DIR "/scratch3/BMC/acomp/Gonzalo.Ferrada/repo-verif/melodies-monet-offline">
 <!ENTITY SCRIPTS_DIR        "&MELODIES_MONET_DIR;/scripts">
 <!ENTITY LOG_DIR            "&MELODIES_MONET_DIR;/logs">
-
-
-
 ]>
 
 <workflow realtime="F" scheduler="slurm" cyclethrottle="1" taskthrottle="20">
@@ -39,11 +35,11 @@
     
     <metatask name="prep_model">
         <var name="experiment">rrfs-netcdf</var>
-        <task name="prep_#experiment#" cycledefs="mm" maxtries="100">
+        <task name="prep_model_#experiment#" cycledefs="mm" maxtries="1">
             &JOIN_RESOURCES_PREP;
             &RESERVATION_BIGMEM;
             
-            <command>&SCRIPTS_DIR;/mm_prep_model_data.sh</command>
+            <command>&SCRIPTS_DIR;/prep_model_data.sh</command>
             <jobname><cyclestr>prep_model_#experiment#</cyclestr></jobname>
             <join><cyclestr>&LOG_DIR;/prep_model_#experiment#_@Y@m@d@H.log</cyclestr></join>
             
@@ -52,15 +48,15 @@
         </task>
     </metatask>
     
-    <metatask name="mm_get_obs">
+    <metatask name="get_obs">
         <var name="dataset">aeronet airnow viirs tempo hms</var>
-        <task name="mm_get_obs_#dataset#" cycledefs="mm" maxtries="20">
+        <task name="get_obs_#dataset#" cycledefs="mm" maxtries="1">
             &JOIN_RESOURCES_SHORT;
             &RESERVATION_SEND;
-            <command>&SCRIPTS_DIR;/mm_get_obs.sh</command>
+            <command>&SCRIPTS_DIR;/get_obs.sh</command>
             
-            <jobname><cyclestr>mm_get_obs_#dataset#</cyclestr></jobname>
-            <join><cyclestr>&LOG_DIR;/mm_get_obs_@Y@m@d@H_#dataset#.log</cyclestr></join>
+            <jobname><cyclestr>get_obs_#dataset#</cyclestr></jobname>
+            <join><cyclestr>&LOG_DIR;/get_obs_@Y@m@d@H_#dataset#.log</cyclestr></join>
             
             <envar><name>CDATE</name><value><cyclestr>@Y@m@d@H</cyclestr></value></envar>
             <envar><name>DATASET</name><value>#dataset#</value></envar>
@@ -68,15 +64,15 @@
         </task>
     </metatask>
     
-    <metatask name="mm_sat_aod">
+    <metatask name="satellite_aod">
         <var name="dataset">viirs tempo</var>
-        <task name="mm_sat_aod_#dataset#" cycledefs="mm" maxtries="100">
+        <task name="satellite_aod_#dataset#" cycledefs="mm" maxtries="1">
             &JOIN_RESOURCES_SHORTEST;
             &RESERVATION;
 
-            <command>&SCRIPTS_DIR;/mm_sat_aod.sh</command>
-            <jobname><cyclestr>mm_sat_aod_#dataset#</cyclestr></jobname>
-            <join><cyclestr>&LOG_DIR;/mm_sat_aod_#dataset#_@Y@m@d@H.log</cyclestr></join>
+            <command>&SCRIPTS_DIR;/satellite_aod.sh</command>
+            <jobname><cyclestr>satellite_aod_#dataset#</cyclestr></jobname>
+            <join><cyclestr>&LOG_DIR;/satellite_aod_#dataset#_@Y@m@d@H.log</cyclestr></join>
 
             <envar><name>CDATE</name><value><cyclestr>@Y@m@d@H</cyclestr></value></envar>
             <envar><name>DATASET</name><value>#dataset#</value></envar>
@@ -84,20 +80,20 @@
             <dependency>
             <and>
                 <metataskdep metatask="prep_model"/>
-                <taskdep task="mm_get_obs_#dataset#"/>
+                <taskdep task="get_obs_#dataset#"/>
             </and>
             </dependency>
         </task>
     </metatask>
     
-    <metatask name="mm_plots">
+    <metatask name="melodies-monet">
         <var name="dataset">airnow aeronet</var>
-        <task name="mm_plots_#dataset#" cycledefs="mm" maxtries="1">
+        <task name="melodies-monet_#dataset#" cycledefs="mm" maxtries="1">
             &JOIN_RESOURCES_MEDMEM;
             &RESERVATION_MEDMEM;
-            <command>&SCRIPTS_DIR;/mm_plots.sh</command>
-            <jobname><cyclestr>mm_plots_#dataset#_@Y@m@d@H</cyclestr></jobname>
-            <join><cyclestr>&LOG_DIR;/mm_plots_#dataset#_@Y@m@d@H.log</cyclestr></join>
+            <command>&SCRIPTS_DIR;/melodies-monet.sh</command>
+            <jobname><cyclestr>melodies-monet_#dataset#_@Y@m@d@H</cyclestr></jobname>
+            <join><cyclestr>&LOG_DIR;/melodies-monet_#dataset#_@Y@m@d@H.log</cyclestr></join>
             
             <envar><name>CDATE</name><value><cyclestr>@Y@m@d@H</cyclestr></value></envar>
             <envar><name>DATASET</name><value>#dataset#</value></envar>
@@ -105,12 +101,26 @@
             <dependency>
                 <and>
                     <metataskdep metatask="prep_model"/>
-                    <taskdep task="mm_get_obs_#dataset#"/>
+                    <taskdep task="get_obs_#dataset#"/>
                 </and>
             </dependency>
         </task>
     </metatask>
     
-    
+    <task name="website" cycledefs="12Z" maxtries="1">
+        &JOIN_RESOURCES_MEDMEM;
+        &RESERVATION;
+        <command>&SCRIPTS_DIR;/website.sh</command>
+        <cores>&JOIN_PROC;</cores>
+        <jobname><cyclestr>website_@Y@m@d@H</cyclestr></jobname>
+        <join><cyclestr>&LOG_DIR;/@Y@m@d@H/website_@Y@m@d@H.log</cyclestr></join>
+
+        <envar><name>CDATE</name><value><cyclestr>@Y@m@d@H</cyclestr></value></envar>
+        <envar><name>SCRIPTS_DIR</name><value>&SCRIPTS_DIR;</value></envar>
+
+        <dependency>
+            <metataskdep metatask="melodies-monet"/>
+        </dependency>
+    </task>
     
 </workflow> 

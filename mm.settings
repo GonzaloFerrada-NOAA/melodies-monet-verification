@@ -31,6 +31,7 @@ _mm_default AUX_DIR             "${MELODIES_MONET_DIR}/aux"
 _mm_default YAML_DIR            "${USH_DIR}/yaml_templates"
 _mm_default OBS_DIR             "${MELODIES_MONET_DIR}/obs"
 _mm_default OUTPUT_DIR          "${MELODIES_MONET_DIR}/output"
+_mm_default FIG_DIR             "${MELODIES_MONET_DIR}/figures"
 _mm_default RUN_DIR             "${MELODIES_MONET_DIR}/run"
 _mm_default TOWEB_DIR           "${MELODIES_MONET_DIR}/toweb"
 _mm_default CARTOPY_DATA_DIR    "${AUX_DIR}/cartopy"     # pre-downloaded Natural Earth data (tools/setup_offline_data.sh)

@@ -5,8 +5,9 @@ YAML="${MELODIES_MONET_DIR}/experiments.yaml"
 
 WORKDIR="${OUTPUT_DIR}/${DATASET}"
 ismkdir ${WORKDIR}
+ismkdir ${FIG_DIR}/${DATASET}
 
-FILE_OBS="${OBS_DIR}/${CDATE}/${DATASET}_${YYYYMMDD}.nc"
+FILE_OBS="${OBS_DIR}/${DATASET}_${YYYYMMDD}.nc"
 LAMBERT_CSV_FILE="${AUX_DIR}/lambert_map_settings.csv"
 
 DATE_START="${CYCLE_DATE}"
@@ -52,7 +53,7 @@ ${SRUN_PYTHON} ${USH_DIR}/satellite_aod_verification.py --make-figure \
     --model-names   "${EXPERIMENTS[@]}" \
     --plot-files    "${FILES_EXPERIMENTS[@]}" \
     --regions-csv   "${LAMBERT_CSV_FILE}"   \
-    --path-fig      "${WORKDIR}"
+    --path-fig      "${FIG_DIR}/${DATASET}"
 
 checkstatus
 

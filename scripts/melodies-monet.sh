@@ -1,22 +1,28 @@
 #!/bin/bash
 #==============================================================================
-# mm_run_plots.sh -- MELODIES-MONET verification for ONE model_type/platform.
+# mm_plots.sh -- MELODIES-MONET verification for ONE platform (DATASET).
 # Loops over all SPECIES of the platform, and for each over PLOT_TYPES.
-# control.yaml is assembled from static templates in ${YAML_TEMPLATE_DIR};
+# control.yaml is assembled from static templates in ${YAML_DIR};
 # only cycle-dependent parts are generated:
-#   - analysis dates/output dir      (@START_TIME@ @END_TIME@ @OUTPUT_DIR@)
+#   - analysis dates/output dirs     (@START_TIME@ @END_TIME@, output_dir[_save])
 #   - model block                    (built from experiments.yaml: which
 #                                     experiments have data this cycle)
 #   - obs-model pairs / model names  (@DATA@ @MODEL_NAMES@)
 #   - domain lists                   (@DOMAIN_TYPE@ @DOMAIN_NAME@)
 #   - CSI thresholds                 (@CSI_THRESHOLDS@, from csi_thresholds.txt)
+#   - paired-file prefix             (@SAVE_PREFIX@ = <species>_<CDATE>)
+#
+# Directories:
+#   ${FIG_DIR}/<platform>/<species>/          PNG figures + stats tables
+#   ${OUTPUT_DIR}/<platform>/                 paired netCDF (<species>_<CDATE>_<pair>.nc4)
+#   ${RUN_DIR}/mm_plots/<platform>/<CDATE>/   scratch: control.yaml, obs link, status
+#                                             (removed at the end if nothing failed)
 #
 # Failure handling: each species and each plot type runs in its own subshell,
 # so a crash (or 'exit') only ends that species/plot type; the rest continue.
 #
-# Environment (from Rocoto): CDATE START_TIME WORKDIR OBS_DIR PLOT_OUTPUT_DIR
-#   SCRIPTS_DIR model_type DATASET CONDA_ENV
-# Optional: YAML_TEMPLATE_DIR, MODEL_OUTPUT_DIR
+# Environment (from Rocoto): CDATE DATASET
+# From mm.settings: FIG_DIR OUTPUT_DIR RUN_DIR OBS_DIR YAML_DIR USH_DIR PYTHON
 #==============================================================================
 
 source mm.settings                         # also sources workflow_tools.sh + yaml_helpers.sh
@@ -24,10 +30,11 @@ source mm.settings                         # also sources workflow_tools.sh + ya
 YAML="${MELODIES_MONET_DIR}/experiments.yaml"
 
 platform="${DATASET}"
-output_directory="${OUTPUT_DIR}/${platform}"
+fig_platform_dir="${FIG_DIR}/${platform}"            # + /<species> below
+save_dir="${OUTPUT_DIR}/${platform}"                 # paired netCDF, all species
+run_root="${RUN_DIR}/${platform}/${CDATE}"  # scratch (per cycle: safe for concurrent cycles)
 TEMPLATE_DIR="${YAML_DIR}"
 MODEL_OUTPUT_DIR="${OUTPUT_DIR}/model_data"
-WORKDIR="${output_directory}"
 
 PLOT_TYPES=( "ts_regional" "spatial_overlay" "spatial_bias" "boxplot" "taylor" "scorecard" "csi" "stats" )
 
@@ -49,6 +56,12 @@ fill() {
     local v=${3//\\/\\\\}; v=${v//&/\\&}; v=${v//|/\\|}   # escape sed specials
     sed -i "s|@${2}@|${v}|g" "$1"
 }
+# setkey FILE KEY VALUE : set an 'analysis:' key (2-space indent) to VALUE,
+# whatever the template has there (token or literal path)
+setkey() {
+    local v=${3//\\/\\\\}; v=${v//&/\\&}; v=${v//|/\\|}
+    sed -i "s|^\(  ${2}:\).*|\1 ${v}|" "$1"
+}
 # lookup FILE KEY : print everything after KEY on its line (empty if not found)
 lookup() {
     awk -v k="$2" '$1==k { $1=""; sub(/^ +/,""); print; exit }' "$1"
@@ -65,7 +78,7 @@ model_file() { echo "${MODEL_OUTPUT_DIR}/aqm_${1}_${2}.nc"; }
 
 # record SPECIES PLOT_TYPE STATUS : append one line to the status file.
 # Subshells can't change parent arrays, so results are passed through a file.
-STATUS_FILE=${WORKDIR}/plot_status.txt
+STATUS_FILE=${run_root}/plot_status.txt
 record() { printf "%-12s %-18s %s\n" "$1" "$2" "$3" >> ${STATUS_FILE}; }
 
 #------------------------------------------------------------------------------
@@ -129,7 +142,8 @@ if [[ ! -e ${obsfile} ]]; then
     exit 1
 fi
 
-mkdir -p ${WORKDIR} ${output_directory}
+rm -rf ${run_root}                           # fresh scratch for this cycle (reruns too)
+mkdir -p ${run_root} ${save_dir} ${fig_platform_dir}
 : > ${STATUS_FILE}                           # start with an empty status file
 
 #==============================================================================
@@ -142,14 +156,15 @@ for species in "${SPECIES[@]}"; do
 
   echo ""
   echo "##################################################################"
-  echo "### ${species} (${platform}, ${model_type}): starting $(date -u)"
+  echo "### ${species} (${platform}): starting $(date -u)"
   echo "##################################################################"
 
   rc=0
   (
-    WORKDIR=${WORKDIR}/${species}        # isolate files per species
-    mkdir -p ${WORKDIR}
-    cd ${WORKDIR} || exit 1
+    rundir=${run_root}/${species}        # scratch files per species
+    figdir=${fig_platform_dir}/${species}  # PNGs per species
+    mkdir -p ${rundir} ${figdir}
+    cd ${rundir} || exit 1
 
     if [[ ! -r ${TEMPLATE_DIR}/variables/${species}.yaml ]]; then
       echo "ERROR: missing template ${TEMPLATE_DIR}/variables/${species}.yaml"
@@ -160,7 +175,7 @@ for species in "${SPECIES[@]}"; do
     #--------------------------------------------------------------------------
     # Model block: one entry per experiment that has data and the variable.
     #--------------------------------------------------------------------------
-    model_block=${WORKDIR}/model_block.yaml
+    model_block=${rundir}/model_block.yaml
     echo "model:" > ${model_block}
     pairs=()                                 # 'platform_label' entries for data:
     models=()                                # 'label' entries for model_name_list:
@@ -181,7 +196,6 @@ for species in "${SPECIES[@]}"; do
         echo "Variable ${modvar} not in ${testfile}, skipping ${exp}"; continue
       fi
 
-      # label=${exp}_${run:0:8}-${hh}Z
       label=${exp}
       pairs+=("'${platform}_${label}'")
       models+=("'${label}'")
@@ -212,19 +226,21 @@ for species in "${SPECIES[@]}"; do
     if (( ${#pairs[@]} == 0 )); then
       echo "NO model data for ${species} on ${YYYYMMDD}, skipping species"
       record "${species}" "ALL" "SKIPPED (no model data)"
+      rmdir ${figdir} 2>/dev/null || true    # don't leave an empty figure dir
       exit 0
     fi
 
     # Base YAML shared by every plot type: analysis + model + obs + variables
-    base_yaml=${WORKDIR}/base.control.yaml
+    base_yaml=${rundir}/base.control.yaml
     cat ${TEMPLATE_DIR}/analysis.yaml \
         ${model_block} \
         ${TEMPLATE_DIR}/obs/${platform}.yaml \
         ${TEMPLATE_DIR}/variables/${species}.yaml > ${base_yaml}
     fill ${base_yaml} START_TIME "${start_time_yaml}"
     fill ${base_yaml} END_TIME   "${end_time_yaml}"
-    fill ${base_yaml} OUTPUT_DIR "${output_directory}"
     fill ${base_yaml} SAVE_PREFIX "${species}_${CDATE}"
+    fill ${base_yaml} OUTPUT_DIR      "${figdir}"     # PNGs + stats tables
+    fill ${base_yaml} OUTPUT_DIR_SAVE "${save_dir}"   # paired netCDF
 
     data_list=$(join , "${pairs[@]}")
     model_list=$(join , "${models[@]}")
@@ -253,7 +269,7 @@ for species in "${SPECIES[@]}"; do
 
       prc=0
       (
-        workdir=${WORKDIR}/${plot_type}
+        workdir=${rundir}/${plot_type}
         mkdir -p ${workdir}
         cd ${workdir} || exit 1
         rm -f tmp.control.yaml* control.yaml
@@ -307,14 +323,25 @@ n_skipped=$(grep -c ' SKIPPED'  ${STATUS_FILE} || true)
 
 echo ""
 echo "=========================================================="
-echo "     SUMMARY: ${model_type} / ${platform} / ${YYYYMMDD}"
+echo "     SUMMARY: ${platform} / ${CDATE}"
 echo "=========================================================="
 printf "%-12s %-18s %s\n" "SPECIES" "PLOT_TYPE" "STATUS"
 echo "----------------------------------------------------------"
 cat ${STATUS_FILE}
 echo "=========================================================="
 echo "Succeeded: ${n_success}   Failed: ${n_failed}   Skipped: ${n_skipped}"
+echo "Figures : ${fig_platform_dir}/<species>"
+echo "Paired  : ${save_dir}"
 echo "=========================================================="
+
+# -------------------------------------------------------
+# Scratch cleanup: keep the run directory only if something failed (debugging)
+# -------------------------------------------------------
+if (( n_failed == 0 )); then
+    rm -rf ${run_root}
+else
+    echo "Run files kept for debugging: ${run_root}"
+fi
 
 # -------------------------------------------------------
 # Final Rocoto task exit status: DEAD only if everything attempted failed

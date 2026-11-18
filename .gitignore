@@ -4,3 +4,6 @@ output
 *.db
 *__*
 logs
+*cartopy*
+figures
+run
