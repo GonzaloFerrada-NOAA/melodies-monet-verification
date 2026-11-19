@@ -2,33 +2,31 @@
 
 source mm.settings
 
-YAML="${MELODIES_MONET_DIR}/experiments.yaml"
-
 # CDATE must be YYYYMMDDHH (catches unsubstituted Rocoto strings)
 [[ ${CDATE} =~ ^[0-9]{10}$ ]] || { echo "ERROR: invalid CDATE='${CDATE}'" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
 # Experiment settings
 # ---------------------------------------------------------------------------
-model_name=$(yaml_get "${YAML}" "${EXP}" model_name)
-raw_output_directory=$(yaml_get "${YAML}" "${EXP}" raw_output_directory)
-raw_output_filenames=$(yaml_get "${YAML}" "${EXP}" raw_output_filenames)
-raw_output_format=$(yaml_get "${YAML}" "${EXP}" raw_output_format)
-simulation_length_hr=$(yaml_get "${YAML}" "${EXP}" simulation_length_hr)
-output_interval_hr=$(yaml_get "${YAML}" "${EXP}" output_interval_hr) || output_interval_hr=1
+model_name=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" model_name)
+raw_output_directory=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" raw_output_directory)
+raw_output_filenames=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" raw_output_filenames)
+raw_output_format=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" raw_output_format)
+simulation_length_hr=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" simulation_length_hr)
+output_interval_hr=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" output_interval_hr) || output_interval_hr=1
 
 # Species: two parallel arrays (same index = same species, file order kept)
 SPECIES_MODEL=(); SPECIES_MM=()
 while IFS=$'\t' read -r k v; do
   SPECIES_MODEL+=("${k}"); SPECIES_MM+=("${v}")
-done < <(yaml_map "${YAML}" "${EXP}" species)
+done < <(yaml_map "${YAML_EXPERIMENTS}" "${EXP}" species)
 (( ${#SPECIES_MODEL[@]} > 0 )) || { echo "ERROR: no species for ${EXP}" >&2; exit 1; }
 species_csv=$(IFS=,; echo "${SPECIES_MODEL[*]}")     # aod550,pm25,... for python
 
 # ---------------------------------------------------------------------------
 # Recipe: optional 'recipe:' key in experiments.yaml overrides the default
 # ---------------------------------------------------------------------------
-recipe=$(yaml_get "${YAML}" "${EXP}" recipe) || recipe=""
+recipe=$(yaml_get "${YAML_EXPERIMENTS}" "${EXP}" recipe) || recipe=""
 if [[ -z ${recipe} ]]; then
   shopt -s nocasematch                                # case insensitive
   case "${model_name}" in

@@ -1,0 +1,315 @@
+# ==========================================================================
+# TEMPLATE: settings for generate_website.py. website.sh fills the __PLACEHOLDERS__
+# for each cycle and writes the result to $RUN_DIR/website/<CDATE>/website.yaml.
+#
+# Output tree:
+#   <web_dir>/index.html                 shared layout: theme, cycle, platform, variable and
+#                                        experiments (colours); rebuilt every run, lists all cycles
+#   <web_dir>/<YYYYMMDDHH>/<page>.html   one page per dataset (keys of 'pages' below)
+#
+# Experiments come from experiments.yaml (--experiments, in file order); their colours are
+# hard-coded at the top of generate_website.py and given in that order.
+# ==========================================================================
+
+title: Model Verification
+web_dir: __WEB_DIR__
+
+# Window shown in every page (hours relative to the cycle); website.sh sets the end
+# to the longest simulation_length_hr in experiments.yaml
+window_hours_before: 0
+window_hours_after: __WINDOW_HOURS_AFTER__
+
+# {cdate} = YYYYMMDDHH, {yyyymmdd}, {date:%Y%m%d} (HMS: each day of the window),
+# {platform}, {exp}, {dataset}
+paths:
+  # MELODIES-MONET paired files: <obs species>_<CDATE>_<platform>_<exp>.nc4
+  paired: __OUTPUT_DIR__/{platform}/*_{cdate}_{platform}_{exp}.nc4
+  hms_fires: __OBS_DIR__/hms_fire{date:%Y%m%d}.txt
+  viirs: __OBS_DIR__/viirs_{yyyymmdd}.nc
+  tempo: __OBS_DIR__/tempo_{yyyymmdd}.nc
+  # satellite_aod.sh output (model vs. satellite, paired)
+  sat_bias: __OUTPUT_DIR__/{dataset}/aod_{dataset}_{exp}_{cdate}.nc
+
+# --------------------------------------------------------------------------
+# Pages: button order in "Observation Platform" = order here; file = <key>.html.
+#   type: stations | fires | aod | aod_bias
+#   stations: folder = workflow platform name (default: the key); variables = buttons
+#             (names after species_aliases); default = selected when the page opens
+# A page is only written when its data exist; buttons of missing pages are greyed out.
+# --------------------------------------------------------------------------
+start_page: airnow
+pages:
+  airnow:
+    label: AirNow
+    type: stations
+    variables: [PM2.5, PM10, Ozone, NO2, CO, 2-m temperature]
+    default: PM2.5
+  aeronet:
+    label: AERONET
+    type: stations
+    variables: [AOD 550 nm]
+    default: AOD 550 nm
+  openaq:
+    label: OpenAQ
+    type: stations
+    variables: [PM2.5, PM10, Ozone, NO2, CO]
+    default: PM2.5
+  ish:
+    label: ISH
+    type: stations
+    variables: [Visibility, Ceiling]
+    default: Visibility
+  ish-lite:
+    label: ISH-lite
+    type: stations
+    variables: [2-m temperature, Dew point temperature, Wind direction, Wind Speed, 1-hr accumulated precipitation]
+    default: 2-m temperature
+  viirs-models-bias:             # model vs. satellite: Variable = AOD 550 nm; Experiments: one at a time
+    label: VIIRS
+    type: aod_bias
+    dataset: viirs
+    obs_label: VIIRS
+  tempo-models-bias:
+    label: TEMPO
+    type: aod_bias
+    dataset: tempo
+    obs_label: TEMPO
+  # metar, rave, ngfs: no reader yet (add a builder in generate_website.py)
+
+# --------------------------------------------------------------------------
+# Reference observations (left panel + layer control, top right): shown over any
+# page. Each is also written as <key>.html, which index.html loads on demand.
+# show = on when the website opens. VIIRS/TEMPO are switched off on the
+# VIIRS/TEMPO model pages above.
+# --------------------------------------------------------------------------
+reference:
+  hms:
+    label: HMS fires
+    type: fires
+    show: true
+  viirs:
+    label: VIIRS AOD 550 nm
+    type: aod
+    dataset: viirs
+    show: false
+  tempo:
+    label: TEMPO AOD 550 nm
+    type: aod
+    dataset: tempo
+    show: false
+
+# --------------------------------------------------------------------------
+# Experiments panel
+# --------------------------------------------------------------------------
+experiments:
+  observation: {label: Observation, color: "#000000"}
+  default_style: solid             # solid | dash | dot | dashdot
+  default_output_hours: 1          # if experiments.yaml has no output_interval_hr
+  fallback_colors: ["#17becf", "#bcbd22", "#e377c2", "#7f7f7f", "#ff7f0e"]   # after the built-in colours
+  # labels: {rrfs-netcdf: RRFS-SD}  # name shown, when it differs from the experiments.yaml key
+
+# Workflow species names (paired file prefix) -> names shown on the website
+species_aliases:
+  PM2.5: PM2.5
+  PM10: PM10
+  OZONE: Ozone
+  NO2: NO2
+  CO: CO
+  TEMP: 2-m temperature
+  aod_550nm: AOD 550 nm
+  temp: 2-m temperature
+  dew_pt_temp: Dew point temperature
+  wdir: Wind direction
+  ws: Wind Speed
+  precip_1hr: 1-hr accumulated precipitation
+  vsb: Visibility
+  ceiling: Ceiling
+
+# --------------------------------------------------------------------------
+# Gridded AOD (viirs / tempo pages). Hours with data + the mean of the window are embedded.
+# --------------------------------------------------------------------------
+aod:
+  # crop: [-180, -40, 12, 73]      # [west, east, south, north] kept in the pages (default: map.bounds)
+  viirs:
+    label: VIIRS AOD 550 nm
+    variable: aod550             # field shown (hourly frames and their mean)
+    count_variable: count        # weights for the mean (sum(aod*count)/sum(count))
+    max_value: 5                 # stored as 1 byte/cell up to this value (~0.005 steps near 0.1)
+    missing_at_or_below: 0       # cells <= this are transparent and left out of the mean; null = keep all
+    coarsen: 1                   # 1 = native 0.05 deg; 2 = 0.1 deg (count-weighted), ~4x smaller html
+    decimals: 2                  # value shown when hovering
+    color_scale: AOD 550 nm      # a color_scales entry, or give bounds: [...] and colors: [...]
+  tempo:
+    label: TEMPO AOD 550 nm
+    variable: aod550
+    count_variable: count
+    max_value: 5
+    missing_at_or_below: 0
+    coarsen: 1                   # native 0.1 deg
+    decimals: 2
+    color_scale: AOD 550 nm
+  # Only hourly frames are stored; the mean is computed in the browser for the period
+  # between the two gold handles of the time slider (default: the whole window).
+  display:
+    start: mean                  # frame when the page opens: mean | first | latest
+    opacity: 0.75
+    frame_ms: 700                # animation speed (Play)
+  # PNG button: region + projection window; white background, boundary lines only
+  snapshot:
+    width: 800
+    projection: mercator         # mercator | latlon | lambert
+    regions:
+      CONUS:
+        {bounds: [-130, -63, 23, 51], lambert_bounds: [-126, -69, 23, 50], lambert_origin: [38.5, -97.5]}
+      North America:
+        {bounds: [-180, -40, 12, 73], lambert_bounds: [-160, -55, 15, 68], lambert_origin: [41.75, -105]}
+    boundaries:
+      - {url: "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_1_states_provinces_lakes.geojson",
+         color: "#707070", width: 0.5}
+      - {url: "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_0_countries_lakes.geojson",
+         color: "#3a3a3a", width: 0.8}
+
+# Model vs. satellite pages (VIIRS, TEMPO under Observation Platform): one variable;
+# the Experiments panel shows one field at a time: Observation, each experiment
+# (model AOD) and, indented under it, its bias (model - satellite).
+# Hourly frames from the satellite_aod output; {exp} / {obs} = names in the labels.
+aod_bias:
+  variable: AOD 550 nm
+  coarsen: 2                     # 2 x 2 cells -> 1 (keeps the html small)
+  decimals: 2
+  observation: {max: 5, color_scale: AOD 550 nm, label: "{obs} AOD 550 nm"}
+  model:       {max: 5, color_scale: AOD 550 nm, label: "{exp} AOD 550 nm"}
+  bias:        {min: -1, max: 1, color_scale: AOD bias, label: "{exp} − {obs} AOD"}   # stored linearly in [min, max]
+
+# --------------------------------------------------------------------------
+# Decimal places per variable (rounding in the html, tooltips, CSV downloads)
+# --------------------------------------------------------------------------
+decimals:
+  default: 2
+  FRP: 1
+  AOD 550 nm: 3
+  PM2.5: 2
+  PM10: 2
+  NO2: 1
+  Ozone: 1
+  CO: 0
+  2-m temperature: 1
+  Dew point temperature: 1
+  Wind direction: 0
+  Wind Speed: 1
+  1-hr accumulated precipitation: 2
+  Visibility: 1
+  Ceiling: 0
+
+# Popup chart size (any CSS length)
+popup:
+  width: 36vw
+  height: 36vh
+  min_width: 480px
+  min_height: 360px
+
+# --------------------------------------------------------------------------
+# Map
+# --------------------------------------------------------------------------
+map:
+  center: [40.0, -98.0]
+  zoom: 5
+  zoom_behavior: {snap: 0.25, delta: 0.5, wheel_px_per_level: 120}
+  bounds: [[5, -180], [89, -10]]        # panning limit [[south, west], [north, east]]
+  themes:
+    dark:  {base: Satellite (Esri),   boundaries: true,  panel_bg: "#171717"}
+    light: {base: Topographic (Esri), boundaries: false, panel_bg: "#ebebeb"}
+  base_layers:
+    - name: Satellite (Esri)
+      url: https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+      attribution: Tiles &copy; Esri
+      max_zoom: 19
+    - name: Topographic (Esri)
+      url: https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}
+      attribution: Tiles &copy; Esri
+      max_zoom: 19
+    - name: Light gray (Esri)
+      url: https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}
+      attribution: Tiles &copy; Esri
+      max_zoom: 16
+    - name: OpenStreetMap
+      url: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      max_zoom: 19
+    - name: OpenTopoMap
+      url: https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png
+      attribution: '&copy; OpenStreetMap contributors, SRTM | &copy; OpenTopoMap (CC-BY-SA)'
+      max_zoom: 17
+  boundaries:
+    name: Boundaries & labels
+    url: https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}
+    attribution: Boundaries &copy; Esri
+
+# --------------------------------------------------------------------------
+# Discrete colour scales: bound i = LOWER edge of bin i (colors[i] for [bounds[i], bounds[i+1])).
+# Variables listed get coloured circles; others keep drop markers.
+# --------------------------------------------------------------------------
+color_scales:
+  default_colors: ["#ADD8E6", "#59B61F", "#F6D348", "#EA8C33", "#DF4633", "#8B0000", "#B33FBA"]
+  variables:
+    AOD 550 nm:
+      bounds: [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5]
+      colors: ["#E3E3E3", "#CCD8DF", "#B5CDDB", "#9FC2D7", "#88B7D3", "#55B45E", "#C4D779", "#FBD37A",
+               "#FCAA5F", "#F5854E", "#E2553B", "#C21B26", "#9B1B47", "#AF527E", "#FFC0CB"]
+    AOD bias:                   # model - satellite, symmetric around 0
+      bounds: [-0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, -0.05, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
+      colors: ["#053061", "#2166ac", "#4393c3", "#6baed6", "#92c5de", "#c6dbef", "#e3eef8", "#f7f7f7",
+               "#fde0d2", "#fcbba1", "#f4a582", "#e8735a", "#d6604d", "#b2182b", "#67001f"]
+    PM2.5:
+      bounds: [0, 2, 10, 25, 50, 100, 200]
+    PM10:
+      bounds: [0, 20, 50, 100, 250, 500, 1000]
+    NO2:
+      bounds: [0, 2, 4, 10, 20, 40, 60]
+    Ozone:
+      bounds: [35, 45, 55, 65, 75, 85, 95]
+    CO:
+      bounds: [100, 200, 400, 600, 800, 1000, 2000]
+    2-m temperature:
+      bounds: [-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
+      colors: ["#E6E6FA", "#BBC3F0", "#5781F7", "#1692F5", "#23DDF5", "#2CCFA6", "#22E215",
+               "#A7FA0A", "#F1DE22", "#FC9E18", "#F96019", "#E61F5C", "#F76DD6"]
+    1-hr accumulated precipitation:
+      bounds: [0, 0.25, 0.5, 1, 2, 4, 6, 10, 15, 25]
+      colors: ["#FFFFFF", "#C7E9C0", "#A1D99B", "#74C476", "#31A354", "#006D2C",
+               "#FED976", "#FD8D3C", "#E31A1C", "#800026"]
+
+# Station markers
+stations:
+  marker_radius: 6
+  gap_minutes: 65                # break a line when values are further apart (hourly data)
+  no_data_color: "#9e9e9e"
+
+# HMS fire symbols
+hms:
+  gap_minutes: 20
+  frp_classes: [50, 500, 2000]   # MW: size class edges (max FRP in the window)
+  radii: [3, 5, 7, 9]
+  satellites:                    # shape: square | circle | triangle
+    GOES-EAST: {shape: circle, color: "#00ff00"}
+    GOES-WEST: {shape: circle, color: "#00FFFF"}
+    SUOMI NPP: {shape: circle, color: "#9e9e9e"}
+    NOAA 20:   {shape: circle, color: "#FFA500"}
+    NOAA 21:   {shape: circle, color: "#ffff00"}
+  other_satellite: {shape: triangle, color: "#9370db"}
+
+# Variable units (also the button order fallback)
+variables:
+  AOD 550 nm: unitless
+  PM2.5: µg/m³
+  PM10: µg/m³
+  NO2: ppb
+  Ozone: ppb
+  CO: ppb
+  2-m temperature: °C
+  Dew point temperature: °C
+  Wind direction: °
+  Wind Speed: m/s
+  1-hr accumulated precipitation: mm
+  Visibility: m
+  Ceiling: m

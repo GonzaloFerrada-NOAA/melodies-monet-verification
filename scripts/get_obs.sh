@@ -1,15 +1,14 @@
 #!/bin/bash
 
 source mm.settings
-YAML="${MELODIES_MONET_DIR}/experiments.yaml"
 
 # Determine the maximum simulation_length_hr from the experiments:
 max_sim_len=0
 while IFS= read -r exp; do
-    len=$(yaml_get "${YAML}" "${exp}" simulation_length_hr) || { echo "ERROR: simulation_length_hr missing for ${exp}" >&2; exit 1; }
+    len=$(yaml_get "${YAML_EXPERIMENTS}" "${exp}" simulation_length_hr) || { echo "ERROR: simulation_length_hr missing for ${exp}" >&2; exit 1; }
     len=$((10#${len})) # force base 10 (e.g. "072")
     if (( len > max_sim_len )); then max_sim_len=${len}; fi
-done < <(yaml_experiments "${YAML}")
+done < <(yaml_experiments "${YAML_EXPERIMENTS}")
 
 # Simulation length in whole days, rounded up (24 h -> 1, 25-48 h -> 2, ...)
 max_sim_len_days=$(( (max_sim_len + 23) / 24 ))

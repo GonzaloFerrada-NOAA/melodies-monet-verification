@@ -27,8 +27,6 @@
 
 source mm.settings                         # also sources workflow_tools.sh + yaml_helpers.sh
 
-YAML="${MELODIES_MONET_DIR}/experiments.yaml"
-
 platform="${DATASET}"
 fig_platform_dir="${FIG_DIR}/${platform}"            # + /<species> below
 save_dir="${OUTPUT_DIR}/${platform}"                 # paired netCDF, all species
@@ -87,7 +85,7 @@ record() { printf "%-12s %-18s %s\n" "$1" "$2" "$3" >> ${STATUS_FILE}; }
 #   X_SPC["exp|obsname"] = model variable  (obsname lower-cased so that the
 #   same model var matches e.g. airnow 'TEMP' and ish-lite 'temp')
 #------------------------------------------------------------------------------
-[[ -r ${YAML} ]] || { echo "ERROR: missing ${YAML}"; exit 1; }
+[[ -r ${YAML_EXPERIMENTS} ]] || { echo "ERROR: missing ${YAML_EXPERIMENTS}"; exit 1; }
 
 EXPS=()
 declare -A X_TYPE X_INIT X_LEN X_RELDAY X_COLOR X_MARKER X_LSTYLE X_MSIZE X_LWIDTH X_SPC
@@ -95,27 +93,27 @@ MAX_SIM_LENGTH=0
 
 while IFS= read -r exp; do
     EXPS+=("${exp}")
-    X_LEN[$exp]=$(yaml_get "${YAML}" "${exp}" simulation_length_hr) \
-        || { echo "ERROR: ${exp}: simulation_length_hr missing in ${YAML}"; exit 1; }
-    X_TYPE[$exp]=$(  yaml_opt "${YAML}" "${exp}" model_type          standard)
-    X_INIT[$exp]=$(  yaml_opt "${YAML}" "${exp}" initialization_hr   0)
-    X_RELDAY[$exp]=$(yaml_opt "${YAML}" "${exp}" relative_day_to_obs 0)
-    X_COLOR[$exp]=$( yaml_opt "${YAML}" "${exp}" color               black)
-    X_MARKER[$exp]=$(yaml_opt "${YAML}" "${exp}" marker              x)
-    X_LSTYLE[$exp]=$(yaml_opt "${YAML}" "${exp}" linestyle           -)
-    X_MSIZE[$exp]=$( yaml_opt "${YAML}" "${exp}" markersize          8)
-    X_LWIDTH[$exp]=$(yaml_opt "${YAML}" "${exp}" linewidth           1.5)
+    X_LEN[$exp]=$(yaml_get "${YAML_EXPERIMENTS}" "${exp}" simulation_length_hr) \
+        || { echo "ERROR: ${exp}: simulation_length_hr missing in ${YAML_EXPERIMENTS}"; exit 1; }
+    X_TYPE[$exp]=$(  yaml_opt "${YAML_EXPERIMENTS}" "${exp}" model_type          standard)
+    X_INIT[$exp]=$(  yaml_opt "${YAML_EXPERIMENTS}" "${exp}" initialization_hr   0)
+    X_RELDAY[$exp]=$(yaml_opt "${YAML_EXPERIMENTS}" "${exp}" relative_day_to_obs 0)
+    X_COLOR[$exp]=$( yaml_opt "${YAML_EXPERIMENTS}" "${exp}" color               black)
+    X_MARKER[$exp]=$(yaml_opt "${YAML_EXPERIMENTS}" "${exp}" marker              x)
+    X_LSTYLE[$exp]=$(yaml_opt "${YAML_EXPERIMENTS}" "${exp}" linestyle           -)
+    X_MSIZE[$exp]=$( yaml_opt "${YAML_EXPERIMENTS}" "${exp}" markersize          8)
+    X_LWIDTH[$exp]=$(yaml_opt "${YAML_EXPERIMENTS}" "${exp}" linewidth           1.5)
 
     # species: map  ->  "modvar<TAB>obsname" lines
     while IFS=$'\t' read -r modvar obsname; do
         X_SPC["${exp}|${obsname,,}"]=${modvar}
-    done < <(yaml_map "${YAML}" "${exp}" species)
+    done < <(yaml_map "${YAML_EXPERIMENTS}" "${exp}" species)
 
     if (( X_LEN[$exp] > MAX_SIM_LENGTH )); then MAX_SIM_LENGTH=${X_LEN[$exp]}; fi
-done < <(yaml_experiments "${YAML}")
+done < <(yaml_experiments "${YAML_EXPERIMENTS}")
 
 if (( ${#EXPS[@]} == 0 )); then
-    echo "ERROR: no experiments found in ${YAML}"
+    echo "ERROR: no experiments found in ${YAML_EXPERIMENTS}"
     exit 1
 fi
 echo "Experiments: ${EXPS[*]}  (max simulation length ${MAX_SIM_LENGTH} h)"

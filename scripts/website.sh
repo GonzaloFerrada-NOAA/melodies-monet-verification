@@ -1,63 +1,62 @@
-#!/bin/bash --login
-#
-# Build the verification dashboard: ONE self-contained html per cycle and model_type,
-# from the MELODIES-MONET time-series CSVs (mm_run task) and the HMS fire text files.
-#
-# Environment (Rocoto XML):
-#   START_TIME          cycle day, YYYYMMDD
-#   MELODIES_MONET_DIR  main directory of the real-time system
-#   model_type          regional_smoke | regional_chemistry | regional_aerosols | global | all
-#   WORKDIR             working directory of this task
-#   OBSDIR              observations of this cycle (not used by the dashboard)
-#   SCRIPTS_DIR         real-time scripts (generate_dashboard.py, yaml_templates/)
-#   PLOT_OUTPUT_DIR     <species>/<platform>/plot_grp1.timeseries.*.csv of this cycle
-#   HMS_TXT_DIR         HMS fire text files (hms_fireYYYYMMDD.txt)
-#   CONDA_ENV           conda environment with pandas + pyyaml
-#
+#!/bin/bash
+#==============================================================================
+# website.sh -- build the verification website for one cycle (CDATE):
+#   ${OUTPUT_DIR}/website/index.html             shared layout (rebuilt each run, lists all cycles)
+#   ${OUTPUT_DIR}/website/${CDATE}/<page>.html    one page per dataset (airnow, aeronet, hms,
+#                                                 viirs, tempo, viirs-models-bias, ...)
+# Inputs (earlier tasks):
+#   ${OUTPUT_DIR}/<platform>/<species>_${CDATE}_<platform>_<exp>.nc4   melodies-monet (paired)
+#   ${OBS_DIR}/hms_fireYYYYMMDD.txt                                    get_obs hms
+#   ${OBS_DIR}/{viirs,tempo}_YYYYMMDD.nc                               get_obs viirs/tempo
+#   ${OUTPUT_DIR}/<viirs|tempo>/aod_<ds>_<exp>_${CDATE}.nc             satellite_aod
+# Environment (Rocoto): CDATE
+#==============================================================================
 source mm.settings
 
-# Cycle 00Z of START_TIME; the dashboard shows START_TIME-24h .. START_TIME+24h
-cycle="${DATEF} 00:00"
+YAML="${MELODIES_MONET_DIR}/experiments.yaml"
+TEMPLATE="${YAML_DIR}/html_dashboard.yaml"
+WEB_DIR="${OUTPUT_DIR}/website_${CDATE}"
+RUN_WEB="${RUN_DIR}/website/${CDATE}"
+CONFIG="${RUN_WEB}/website.yaml"
 
-# Paths without a trailing slash
-plot_dir="${PLOT_OUTPUT_DIR}/${CDATE}/sites"
-hms_dir="${DIR_HMS_TXT}"
-out_dir="${plot_dir}/website"
-out_html="${out_dir}/index.html"
-run_dir="${RUN_DIR}/${DATE}/html"
-mkdir -p ${out_dir} ${run_dir}
-cd ${run_dir}
+isfile "${YAML_EXPERIMENTS}"
+isfile "${TEMPLATE}"
+ismkdir "${WEB_DIR}/${CDATE}"
+ismkdir "${RUN_WEB}"
 
-# Hourly AOD of this cycle (48 h). ADJUST the directories to where the aggregation task
-# writes them; with or without the .nc extension.
-viirs_file="${OBS_DIR}/viirs_${YYYYMMDD}.nc"
-tempo_file="${OBS_DIR}/tempo_${YYYYMMDD}.nc"
+# Experiments (order = colour order on the website) and the longest simulation (window length)
+EXPS=()
+MAX_SIM_LENGTH=0
+while IFS= read -r exp; do
+    EXPS+=( "${exp}" )
+    len=$(yaml_get "${YAML_EXPERIMENTS}" "${exp}" simulation_length_hr) \
+        || { echo "ERROR: ${exp}: simulation_length_hr missing in ${YAML_EXPERIMENTS}"; exit 1; }
+    len=$((10#${len}))                                # force base 10 (e.g. "072")
+    if (( len > MAX_SIM_LENGTH )); then MAX_SIM_LENGTH=${len}; fi
+done < <(yaml_experiments "${YAML_EXPERIMENTS}")
 
-[[ ! -s ${viirs_file} ]] && viirs_file=None
-[[ ! -s ${tempo_file} ]] && tempo_file=None
-
-echo "VIIRS AOD file: ${viirs_file}"
-echo "TEMPO AOD file: ${tempo_file}"
-
-# Fill the yaml template for this cycle / model_type
-template="${SCRIPTS_DIR}/yaml_templates/html_dashboard.yaml"
-config="${run_dir}/dashboard.yaml"
-if [[ ! -f ${template} ]] ; then
-    echo "FATAL: yaml template not found: ${template}"
+if (( ${#EXPS[@]} == 0 )); then
+    echo "ERROR: no experiments in ${YAML_EXPERIMENTS}"
     exit 1
 fi
+echo "Experiments: ${EXPS[*]}  (window ${MAX_SIM_LENGTH} h)"
 
-sed -e "s|__CYCLE__|${cycle}|g" \
-    -e "s|__PLOT_OUTPUT_DIR__|${plot_dir}|g" \
-    -e "s|__HMS_TXT_DIR__|${hms_dir}|g" \
-    -e "s|__OUTPUT_HTML__|${out_html}|g" \
-    ${template} > ${config}
+# Fill the template for this cycle
+sed -e "s|__WEB_DIR__|${WEB_DIR}|g" \
+    -e "s|__OUTPUT_DIR__|${OUTPUT_DIR}|g" \
+    -e "s|__OBS_DIR__|${OBS_DIR}|g" \
+    -e "s|__WINDOW_HOURS_AFTER__|${MAX_SIM_LENGTH}|g" \
+    "${TEMPLATE}" > "${CONFIG}"
 
-# Build the html
-${SRUN_PYTHON} ${SCRIPTS_DIR}/generate_website.py ${config} --viirs-file "${viirs_file}" --tempo-file "${tempo_file}"
+# Pages of this cycle + index.html
+cd "${RUN_WEB}"
+${SRUN_PYTHON} "${USH_DIR}/generate_website.py" "${CONFIG}" \
+    --cycle            "${CDATE}"      \
+    --experiments      "${EXPS[@]}"    \
+    --experiments-yaml "${YAML_EXPERIMENTS}"
 checkstatus
-isfile ${out_html}
 
-chmod a+r ${out_html}
+isfile "${WEB_DIR}/index.html"
+chmod a+rx "${WEB_DIR}" "${WEB_DIR}/${CDATE}"        # files are already a+r
 
 exit 0
