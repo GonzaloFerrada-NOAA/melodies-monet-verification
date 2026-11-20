@@ -47,8 +47,7 @@ source "${TOOLS_DIR}/yaml_helpers.sh"
 set_date_vars "${CDATE}"        # YYYYMMDD, YYYY, YY, MM, DD, HH, JJJ, CYCLE_DATE
 
 # ---- melodies-monet options ----
-_mm_default VIIRS_PLOT_INCLUDE_COLORBAR true
-MELODIES_MONET_MAKE_PLOTS = false # if true, the melodies-monet task will make spatial, line, timeseries PNG (more time consuming)
+_mm_default MELODIES_MONET_MAKE_PLOTS false # if true, the melodies-monet task will make spatial, line, timeseries PNG (more time consuming)
                                  # set to false if you're only interested on producing the interactive website.
 
 # ---- Modules (load BEFORE set -x, or Lmod floods the log with trace lines) ----
