@@ -34,13 +34,15 @@ run_root="${RUN_DIR}/${platform}/${CDATE}"  # scratch (per cycle: safe for concu
 TEMPLATE_DIR="${YAML_DIR}"
 MODEL_OUTPUT_DIR="${OUTPUT_DIR}/model_data"
 
-PLOT_TYPES=( "ts_regional" "spatial_overlay" "spatial_bias" "boxplot" "taylor" "scorecard" "csi" "stats" )
+# PLOT_TYPES=( "ts_regional" "spatial_overlay" "spatial_bias" "boxplot" "taylor" "scorecard" "csi" "stats" )
+PLOT_TYPES=( "stats" )
 
 # Species evaluated for each platform (obs names, as in the obs/variables templates)
 case ${platform} in
     airnow)   SPECIES=( "PM2.5"  "PM10"  "OZONE"  "NO2"  "CO"  "TEMP" ) ;;
     openaq)   SPECIES=( "PM2.5"  "PM10"  "OZONE"  "NO2"  "CO" ) ;;
     aeronet)  SPECIES=( "aod_550nm" ) ;;
+    metar)    SPECIES=( "temperature" "dewpoint" "windDir" "windSpeed" "precip1Hour" "visibility" ) ;;
     # ish)      SPECIES=( "vsb"  "ceiling" ) ;;
     # ish-lite) SPECIES=( "temp"  "dew_pt_temp"  "wdir"  "ws"  "precip_1hr" ) ;;
     *)        echo "ERROR: unsupported platform ${platform}"; exit 1 ;;
@@ -245,12 +247,14 @@ for species in "${SPECIES[@]}"; do
     csi_thr=$(lookup ${TEMPLATE_DIR}/csi_thresholds.txt "${species}")
 
     # Regional domains: CONUS + EPA regions (AirNow only)
-    rgn_names=("'CONUS'"); rgn_types=("'isinconus'")
-    if [[ ${platform} == airnow ]]; then
-      regions=$(lookup ${TEMPLATE_DIR}/epa_regions.txt "${species}")
-      for r in ${regions:-R1 R2 R3 R4 R5 R6 R7 R8 R9 R10}; do
-        rgn_names+=("'${r}'"); rgn_types+=("'epa_region'")
-      done
+    if [[ ${platform} == "airnow" ]]; then
+        rgn_names=("'CONUS'"); rgn_types=("'isinconus'")
+        regions=$(lookup ${TEMPLATE_DIR}/epa_regions.txt "${species}")
+        for r in ${regions:-R1 R2 R3 R4 R5 R6 R7 R8 R9 R10}; do
+            rgn_names+=("'${r}'"); rgn_types+=("'epa_region'")
+        done
+    else
+        rgn_names=("'all'"); rgn_types=("'all'")      # whole domain, no region flags needed
     fi
 
     #--------------------------------------------------------------------------

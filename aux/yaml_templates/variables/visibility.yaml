@@ -1,0 +1,5 @@
+      visibility:
+        obs_min: 0.0             # keep 0-visibility reports; use 0.01 to drop them
+        unit_scale: 0.000621371  # m -> mi
+        unit_scale_method: '*'
+        ylabel_plot: 'Visibility (mi)'

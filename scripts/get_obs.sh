@@ -24,219 +24,34 @@ WORKDIR="${OBS_DIR}"
 ismkdir "${WORKDIR}"
 cd "${WORKDIR}"
 
-#--------------------------------------------------
-# SURFRAD  ----------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "surfrad" ]]; then
-    baseurl="https://gml.noaa.gov/aftp/data/radiation/surfrad/realtime"
-    declare -a sites=("bon" "dra" "fpk" "gwn" "psu" "red" "rut" "slv" "sxf" "tbl" "was")
-    for isite in "${sites[@]}"
-    do
-        filename="${isite}${YY}${JJJ}.dat"
-        rm -f ${filename}*
-        wget "${baseurl}/${isite}/${filename}"
-    done
-fi
-
-#--------------------------------------------------
-# AERONET  ----------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "aeronet" ]]; then
-    file="AERONET_L15_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
+# Logic for each DATASET:
+case "${DATASET}" in
+aeronet)
+    file="AERONET_L15_${YYYYMMDD}_${YYYYMMDD_END}.nc"
     fout="aeronet.${YYYYMMDD}.nc"
     rm -f ${file}
-    ${MM_BIN} get-aeronet -s "${DATEF_PREV}" -e "${DATEF_END}" -n 12 --interp-to 0.55 --debug --verbose --no-compress
+    
+    ${MM_BIN} get-aeronet -s "${DATEF}" -e "${DATEF_END}" -n 12 --interp-to 0.55 --debug --verbose --no-compress
     checkstatus
     
     mv ${file} ${fout}
     ${SRUN_PYTHON} ${USH_DIR}/add_region_flags_to_obs.py "${fout}" aeronet
     checkstatus
+    ;;
     
-    exit 0
-fi
-
-#--------------------------------------------------
-# AIRNOW  -----------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "airnow" ]]; then
-    file="AirNow_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
+airnow)
+    file="AirNow_${YYYYMMDD}_${YYYYMMDD_END}.nc"
     fout="airnow.${YYYYMMDD}.nc"
     rm -f ${file}
-    ${MM_BIN} get-airnow -s "${DATEF_PREV}" -e "${DATEF_END}" -n 12 --debug --verbose --no-compress
+    ${MM_BIN} get-airnow -s "${DATEF}" -e "${DATEF_END}" -n 12 --debug --verbose --no-compress
     checkstatus
     
     mv ${file} ${fout}
     ${SRUN_PYTHON} ${USH_DIR}/add_region_flags_to_obs.py "${fout}" airnow
     checkstatus
-    
-    
-    # Create baseline removal file:
-    # baselinesrcpath="${MELODIES_MONET_DIR}/src/MM_Huiying_BaselineRemoval"
-    # locsetpath="${baselinesrcpath}/airnow_sites_epalist_20240716.csv"
-    # basefname="${baselinesrcpath}/IODA_hourlyPM25baseline_v2r1.nc"
-    # ${SRUN_PYTHON} ${SCRIPTS_DIR}/MONETobs_debkg_v2.py ${WORKDIR}/test5.airnow.${YYYYMMDD}.nc ${locsetpath} ${basefname}
-
-    # if [[ -e cur_aqi_ozone.kml ]]; then
-    #     mv cur_aqi_ozone.kml cur_aqi_ozone.${YYYYMMDD}.kml
-    #     source ${SCRIPTS_DIR}/mm_split_aqi_files.sh ${YYYYMMDD} ${WORKDIR} ozone
-    # else
-    #     echo "Did not download ozone AQI data!"
-    # fi
-    
-    # if [[ -e cur_aqi_pm25.kml ]]; then
-    #     mv cur_aqi_pm25.kml cur_aqi_pm25.${YYYYMMDD}.kml
-    #     source ${SCRIPTS_DIR}/mm_split_aqi_files.sh ${YYYYMMDD} ${WORKDIR} pm25
-    # else
-    #     echo "Did not download PM.25 AQI data!"
-    # fi
-    # if [[ -e cur_aqi_combined.kml ]]; then
-    #     mv cur_aqi_combined.kml cur_aqi_combined.${YYYYMMDD}.kml
-    #     source ${SCRIPTS_DIR}/mm_split_aqi_files.sh ${YYYYMMDD} ${WORKDIR} combined
-    # else
-    #     echo "Did not download combined AQI data!"
-    # fi
-
-    exit 0
-fi
-
-#--------------------------------------------------
-# ISH-LITE  ---------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "ish-lite" ]]; then
-    rm -f test5.ish-lite*.nc
-    file="ISH-Lite_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
-    ${MM_BIN} get-ish-lite -s ${DATEF_PREV} -e ${DATEF_END} -n 12 --box 0 -179 90 -50 --debug --verbose --no-compress
-    if [[ -e "${file}" ]]; then
-        echo "obs file created for ISH-Lite"
-        echo "moving ${file} to test5.ish.${YYYYMMDD}.nc"
-        mv ${file} test5.ish-lite.${YYYYMMDD}.nc
-        cp ${SCRIPTS_DIR}/make_westoreastof97_ish-lite.ncl .
-        ncl make_westoreastof97_ish-lite.ncl
-    else
-        echo "test5 is missing for ISH-Lite!"
-        exit 1
-    fi
-    exit 0
-fi
-
-#--------------------------------------------------
-# ISH (visibility, cloud ceilin)  -----------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "ish" ]]; then
-    rm -f test5.ish.*.nc
-    file="ISH_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
-    ${MM_BIN} get-ish -s ${DATEF_PREV} -e ${DATEF_END} --box 0 -179 90 -50 -n 12 --no-compress --verbose --debug
-    if [[ -e ${file} ]]; then
-        echo "obs file created for ISH/ISD"
-        echo "moving ${file} to test5.ish.${YYYYMMDD}.nc"
-        mv ${file} test5.ish.${YYYYMMDD}.nc
-        cp ${SCRIPTS_DIR}/make_westoreastof97_ish.ncl .
-        ncl make_westoreastof97_ish.ncl
-    else
-        echo "test5 is missing for ISH!"
-        exit 1
-    fi
-    exit 0
-fi
-
-#--------------------------------------------------
-# OPEN-AQ  ----------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "openaq" ]]; then
-    rm -f test5.openaq.*.nc
-    export MM_LOGGING_LEVEL=debug
-    # export OPENAQ_API_KEY=dff4aa0d178fdb763b65d72ed81f21da28de5907a9a2f74bd7bbf85d2cbeb98d   # noaa
-    export OPENAQ_API_KEY=2ddf96ae51ef9ba9ce53832092be4a171cdc9f9c43877e82ed3a613acf1d44d7    # gmail
-    file="OpenAQ_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYYMMDD}.nc"
-    ${MM_BIN} get-openaq -s ${DATEF_PREV} -e ${DATEF} --params pm25 -c US --low-cost --verbose --debug
-
-    if [[ -e ${file} ]]; then
-        echo "obs file created for OPEN-AQ"
-        mv ${file} test5.openaq.${YYYYMMDD}.nc
-        cp ${SCRIPTS_DIR}/make_westoreastof97_openaq.ncl .
-        ncl make_westoreastof97_openaq.ncl
-        ncrename -v pm25,PM2.5 test5.openaq.${YYYYMMDD}.nc 
-    else
-        echo "test5 is missing for openaq"
-        exit 1
-    fi
-    exit 0
-fi
-
-#--------------------------------------------------
-# HMS FIRE/SMOKE  ---------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "hms" ]]; then
-    
-    [[ ${YYYYMMDD} -lt 20030401 ]] && echo "ERROR: No HMS data available before 2003-04-01. Aborting" && exit 1
-    
-    day=${YYYYMMDD_PREV}
-    while [[ ${day} -le ${YYYYMMDD_END} ]]; do
-        URL="https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Fire_Points/Text/${day:0:4}/${day:4:2}"
-        file="hms_fire${day}.txt"
-        wget ${URL}/${file}
-        isfile ${file}
-        day=$(date -u -d "${day} + 1 day" +%Y%m%d)
-    done
-    echo "done!";exit 0
-fi
-
-#--------------------------------------------------
-# MODIS  ------------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "modis_aqua" ]]; then
-    hsi get -N /BMC/fdr/Permanent/${YYYY_PREV}/${MM_PREV}/${DD_PREV}/data/sat/nasa/modis/aerosol/${YYYY_PREV}${MM_PREV}${DD_PREV}0000.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY}/${MM}/${DD}/data/sat/nasa/modis/aerosol/${YYYYMMDD}0000.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY_END}/${MM_END}/${DD_END}/data/sat/nasa/modis/aerosol/${YYYY_END}${MM_END}${DD_END}0000.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY_PREV}/${MM_PREV}/${DD_PREV}/data/sat/nasa/modis/aerosol/${YYYY_PREV}${MM_PREV}${DD_PREV}1200.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY}/${MM}/${DD}/data/sat/nasa/modis/aerosol/${YYYYMMDD}1200.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY_END}/${MM_END}/${DD_END}/data/sat/nasa/modis/aerosol/${YYYY_END}${MM_END}${DD_END}1200.zip .
-    for file in *.zip
-    do
-        unzip ${file}
-        rm -f ${file}
-    done
-    # Remove corrupt files
-    for file in MY*
-    do
-        ncdump -hv AOD_550_Dark_Target_Deep_Blue_Combined ${file}
-        [[ $? -ne 0 ]] && rm -f ${file}
-    done
-fi
-
-if [[ "${DATASET}" == "modis_terra" ]]; then
-    hsi get -N /BMC/fdr/Permanent/${YYYY_PREV}/${MM_PREV}/${DD_PREV}/data/sat/nasa/modis/aerosol/${YYYY_PREV}${MM_PREV}${DD_PREV}0000.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY}/${MM}/${DD}/data/sat/nasa/modis/aerosol/${YYYYMMDD}0000.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY_END}/${MM_END}/${DD_END}/data/sat/nasa/modis/aerosol/${YYYY_END}${MM_END}${DD_END}0000.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY_PREV}/${MM_PREV}/${DD_PREV}/data/sat/nasa/modis/aerosol/${YYYY_PREV}${MM_PREV}${DD_PREV}1200.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY}/${MM}/${DD}/data/sat/nasa/modis/aerosol/${YYYYMMDD}1200.zip .
-    hsi get -N /BMC/fdr/Permanent/${YYYY_END}/${MM_END}/${DD_END}/data/sat/nasa/modis/aerosol/${YYYY_END}${MM_END}${DD_END}1200.zip .
-    for file in *.zip
-    do
-        unzip ${file}
-        rm -f ${file}
-    done
-    # Remove corrupt files
-    for file in MO*
-    do
-        ncdump -hv AOD_550_Dark_Target_Deep_Blue_Combined ${file}
-        [[ $? -ne 0 ]] && rm -f ${file}
-    done
-fi
-
-#--------------------------------------------------
-# TROPOMI  ----------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "tropomi" ]]; then
-    ln -s ${DIR_TROPOMI}/NO2/* .
-    ln -s ${DIR_TROPOMI}/CO/* .
-    ln -s ${DIR_TROPOMI}/HCHO/* .
-fi
-
-#--------------------------------------------------
-# VIIRS  ------------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "viirs" ]]; then
+    ;;
+        
+viirs)
     VIIRSDIR="${WORKDIR}/viirs"
     ismkdir "${VIIRSDIR}"
     GCS="https://storage.googleapis.com"
@@ -300,14 +115,10 @@ if [[ "${DATASET}" == "viirs" ]]; then
     checkstatus
     isfile "${file}" 
     ln -sf ${file} "${WORKDIR}/viirs_${YYYYMMDD}.nc"
-    exit 0
-fi
-
-#--------------------------------------------------
-# TEMPO  ------------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "tempo" ]]; then
-    TEMPODIR="${OBS_DIR}/${CDATE}/tempo"
+    ;;
+    
+tempo)
+    TEMPODIR="${OBS_DIR}/tempo"
     ZIPDIR="${TEMPODIR}/zip"
     mkdir -p "${ZIPDIR}"
     HPSS_ROOT="/BMC/fdr/Permanent"
@@ -356,102 +167,120 @@ if [[ "${DATASET}" == "tempo" ]]; then
     checkstatus
     isfile "${file}"
     ln -sf ${file} "${WORKDIR}/tempo_${YYYYMMDD}.nc"
-    exit 0
+    ;;
     
-fi
-
-
-
-
-
-
-# if [[ "${DATASET}" == "tempo" ]]; then
-
-# fi
-
-#--------------------------------------------------
-# PollenSense  ------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "PollenSense" ]]; then
-    # Because the PollenSense data changes from obs to forecast, we grab the data
-    # two days earlier than other data
-    APIKEY=j3xWLmABCaI9cn9PoDyqkXLktPW1mohpDF10v0FBKdxYdsl6Z7kOy8ref9PBn9kD1128e6aisl3TABkoY7Fy3O
-    URL="https://model.pollensense.com/api"
-    region=NA
-    agg=A
-    unit=PPM3
-    format=tiff
+hms)
+    [[ ${YYYYMMDD} -lt 20030401 ]] && echo "ERROR: No HMS data available before 2003-04-01. Aborting" && exit 1
     
-    categories=(POL TRE GRA WEE OTHPAR)
-    ncat_loop=$((${#categories[@]}-1))
-    rm -f ${WORKDIR}/*.tiff
-
-    for icat in $(seq 0 ${ncat_loop})
-    do
-        category=${categories[${icat}]}
-
-        # GET POLLEN
-        # Today is 4/22, the obs directory is 2025042212
-        # Grab the interpolated obs for yesterday, 4/21
-        # Grab today, tomorrow, and 2-day forecast, 4/22, 4/23, 4/24
-        #
-        # COMPARE POLLEN
-        # Today is 4/22, we are running analysis for 4/20 (4/19-4/21)
-        # 1st plot compares yesterday's interpolated obs to the day 1 RAP-Chem forecast
-        # - Model file: 2025042006/aqm_RAP-Chem_2025042006.nc (Times = 0-23)
-        # - Obs   file: 2025042112/POL_20250420.nc
-        #
-        # 2nd plot compares today's PS forecast to day 1 forecast of the following day
-        # - Model file: 2025042106/aqm_RAP-Chem_2025042106.nc (Times = 0-23 of full file)
-        # - Obs (today fcst)   file: 2025042112/POL_20250421.nc
-        #
-        # 3rd plot compares tomorrow's forecast to the day2 forecast of previous day
-        # - Model file: Model file: 2025042006/aqm_RAP-Chem_2025042106.nc (Times = 24-47)
-        # - Obs (tomorrow fcst)file: 2025041912/POL_20250420.nc
-        
-        # Yesterday Obs
-        curl -X 'GET' "${URL}/region?region=${region}&starting=${DATEF_PREV}&category=${category}&agg=${agg}&unit=${unit}&format=${format}&key=${APIKEY}" -H "accept: image/${format}" >> ${category}_${YYYYMMDD_PREV}.tiff
-        python ${SCRIPTS_DIR}/convert_tiff_to_netcdf.py ${WORKDIR} ${category} ${YYYYMMDD_PREV}
-
-        # Today Forecast
-        curl -X 'GET' "${URL}/region?region=${region}&starting=${DATEF}&category=${category}&agg=${agg}&unit=${unit}&format=${format}&key=${APIKEY}" -H "accept: image/${format}" >> ${category}_${YYYYMMDD}.tiff
-        python ${SCRIPTS_DIR}/convert_tiff_to_netcdf.py ${WORKDIR} ${category} ${YYYYMMDD}
-
-        # Tomorrow forecast
-        curl -X 'GET' "${URL}/region?region=${region}&starting=${DATEF_END}&category=${category}&agg=${agg}&unit=${unit}&format=${format}&key=${APIKEY}" -H "accept: image/${format}" >> ${category}_${YYYYMMDD_END}.tiff
-        python ${SCRIPTS_DIR}/convert_tiff_to_netcdf.py ${WORKDIR} ${category} ${YYYYMMDD_END}
-
-        # Two-day forecast
-        curl -X 'GET' "${URL}/region?region=${region}&starting=${DATEF_END2}&category=${category}&agg=${agg}&unit=${unit}&format=${format}&key=${APIKEY}" -H "accept: image/${format}" >> ${category}_${YYYYMMDD_END2}.tiff
-        python ${SCRIPTS_DIR}/convert_tiff_to_netcdf.py ${WORKDIR} ${category} ${YYYYMMDD_END2}
-
+    day=${YYYYMMDD}
+    while [[ ${day} -le ${YYYYMMDD_END} ]]; do
+        URL="https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Fire_Points/Text/${day:0:4}/${day:4:2}"
+        file="hms_fire${day}.txt"
+        wget ${URL}/${file}
+        isfile ${file}
+        day=$(date -u -d "${day} + 1 day" +%Y%m%d)
     done
-fi
+    ;;
+    
+metar)
+    BASE_URL="https://madis-data.ncep.noaa.gov/madisPublic1/data/archive"
+    [[ ${YYYYMMDD} -lt 20010701 ]] && echo "ERROR: No METAR data available before 2001-07-01. Aborting" && exit 1
+    
+    mkdir -p metar; cd metar
+    vars="latitude,longitude,temperature,dewpoint,precip1Hour,visibility,windSpeed,windDir,windGust,stationName"
+    
+    day=${YYYYMMDD}
+    while [[ ${day} -le ${YYYYMMDD_END} ]]; do
+        ymd="${day:0:4}/${day:4:2}/${day:6:2}"
+        wget -r -np -nd -A "*.gz" "${BASE_URL}/${ymd}/point/metar/netcdf/"
+        day=$(date -u -d "${day} + 1 day" +%Y%m%d)
+    done
+    
+    gunzip *.gz # decompress
+    
+    # extract only variables we need:
+    # for f in *; do
+    #     ncks -O -h -v ${vars} ${f} ${f}.nc
+    #     checkstatus; rm ${f}
+    # done
+    cd ..
+    fout="${WORKDIR}/metar.${YYYYMMDD}.nc"
+    
+    ${SRUN_PYTHON} ${USH_DIR}/metar2mm.py "${WORKDIR}/metar" \
+        "${YYYYMMDD}00" "${YYYYMMDD_END}00" "${fout}"
+    
+    rm -rf metar/
+    ;;
+    
+*)
+    echo "ERROR: dataset $DATASET is not implemented or deprecated!"
+    exit 1
+    ;;
+esac
 
-#--------------------------------------------------
-# Google Pollen  ----------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "Google_Pollen" ]]; then
-    scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/google_pollen/${YYYYMMDD}00/TRE_google_${YYYYMMDD}.png .
-    scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/google_pollen/${YYYYMMDD}00/GRA_google_${YYYYMMDD}.png .
-    scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/google_pollen/${YYYYMMDD}00/WEE_google_${YYYYMMDD}.png .
-    exit 0
-fi
+# Options no longer available/deprecated:
+# openaq)
+#     rm -f test5.openaq.*.nc
+#     export MM_LOGGING_LEVEL=debug
+#     # export OPENAQ_API_KEY=dff4aa0d178fdb763b65d72ed81f21da28de5907a9a2f74bd7bbf85d2cbeb98d   # noaa
+#     export OPENAQ_API_KEY=2ddf96ae51ef9ba9ce53832092be4a171cdc9f9c43877e82ed3a613acf1d44d7    # gmail
+#     file="OpenAQ_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYYMMDD}.nc"
+#     ${MM_BIN} get-openaq -s ${DATEF_PREV} -e ${DATEF} --params pm25 -c US --low-cost --verbose --debug
 
-#--------------------------------------------------
-# Pollen.com  -------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "pollen_dot_com" ]]; then
-    wget https://pollenapps.com/DF/pollen/map/pollenmapvideo.mp4
-    python ${SCRIPTS_DIR}/convert_mp4_to_images.py ${WORKDIR}
-fi
+#     if [[ -e ${file} ]]; then
+#         echo "obs file created for OPEN-AQ"
+#         mv ${file} test5.openaq.${YYYYMMDD}.nc
+#         cp ${SCRIPTS_DIR}/make_westoreastof97_openaq.ncl .
+#         ncl make_westoreastof97_openaq.ncl
+#         ncrename -v pm25,PM2.5 test5.openaq.${YYYYMMDD}.nc 
+#     else
+#         echo "test5 is missing for openaq"
+#         exit 1
+#     fi
+#     ;;
+    
+# surfrad)
+#     baseurl="https://gml.noaa.gov/aftp/data/radiation/surfrad/realtime"
+#     declare -a sites=("bon" "dra" "fpk" "gwn" "psu" "red" "rut" "slv" "sxf" "tbl" "was")
+#     for isite in "${sites[@]}"
+#     do
+#         filename="${isite}${YY}${JJJ}.dat"
+#         rm -f ${filename}*
+#         wget "${baseurl}/${isite}/${filename}"
+#     done
+#     ;;
+    
+# ish-lite)
+#     rm -f test5.ish-lite*.nc
+#     file="ISH-Lite_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
+#     ${MM_BIN} get-ish-lite -s ${DATEF_PREV} -e ${DATEF_END} -n 12 --box 0 -179 90 -50 --debug --verbose --no-compress
+#     if [[ -e "${file}" ]]; then
+#         echo "obs file created for ISH-Lite"
+#         echo "moving ${file} to test5.ish.${YYYYMMDD}.nc"
+#         mv ${file} test5.ish-lite.${YYYYMMDD}.nc
+#         cp ${SCRIPTS_DIR}/make_westoreastof97_ish-lite.ncl .
+#         ncl make_westoreastof97_ish-lite.ncl
+#     else
+#         echo "test5 is missing for ISH-Lite!"
+#         exit 1
+#     fi
+#     ;;
 
-#--------------------------------------------------
-# Pollen  -----------------------------------------
-#--------------------------------------------------
-if [[ "${DATASET}" == "NAB_POLLEN" ]]; then
-    scp -o 'ProxyJump jschnell@gate.al.noaa.gov' jschnell@meiyu:/wrk/csd4/rahmadov/RAP-Chem/nab_pollen/${YYYYMMDD}00/scraped_pollen_data_${YYYYMMDD}.csv .
-    cp scraped_pollen_data_${YYYYMMDD}.csv ../scraped_pollen/scraped_pollen_data_${YYYYMMDD}.csv
-fi
+# ish)
+#     rm -f test5.ish.*.nc
+#     file="ISH_${YYYY_PREV}${MM_PREV}${DD_PREV}_${YYYY_END}${MM_END}${DD_END}.nc"
+#     ${MM_BIN} get-ish -s ${DATEF_PREV} -e ${DATEF_END} --box 0 -179 90 -50 -n 12 --no-compress --verbose --debug
+#     if [[ -e ${file} ]]; then
+#         echo "obs file created for ISH/ISD"
+#         echo "moving ${file} to test5.ish.${YYYYMMDD}.nc"
+#         mv ${file} test5.ish.${YYYYMMDD}.nc
+#         cp ${SCRIPTS_DIR}/make_westoreastof97_ish.ncl .
+#         ncl make_westoreastof97_ish.ncl
+#     else
+#         echo "test5 is missing for ISH!"
+#         exit 1
+#     fi
+#     ;;
+
 
 exit 0

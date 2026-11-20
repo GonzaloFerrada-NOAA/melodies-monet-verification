@@ -70,7 +70,8 @@ conda activate "${CONDA_ENV}"
 
 unset -f _mm_default                         # don't leak the helper into the caller
 
-
+# ---- Workflow settings ----
+MELODIES_MONET_MAKE_PLOTS = false
 
 # ---- Shell behavior for the calling task script ----
 set -e                                            # exit on first failing command

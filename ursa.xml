@@ -4,7 +4,7 @@
 
 <!-- SLURM submission info-->
 <!ENTITY ACCOUNT        "acomp"> 
-<!ENTITY QUEUE          "batch">
+<!ENTITY QUEUE          "debug">
 <!ENTITY PARTCOMPUTE    "u1-compute">
 <!ENTITY PARTSERVICE    "u1-service">
 
@@ -40,7 +40,7 @@
     </metatask>
     
     <metatask name="get_obs">
-        <var name="dataset">aeronet airnow viirs tempo hms</var>
+        <var name="dataset">aeronet airnow metar viirs tempo hms</var>
         <task name="get_obs_#dataset#" cycledefs="mm" maxtries="1">
             &RESERVATION_SERVICE;
             <walltime>01:00:00</walltime>
@@ -83,10 +83,12 @@
     </metatask>
     
     <metatask name="melodies-monet">
-        <var name="dataset">airnow aeronet</var>
+        <var name="dataset">airnow aeronet metar</var>
         <task name="melodies-monet_#dataset#" cycledefs="mm" maxtries="1">
             &RESERVATION_COMPUTE;
-            <walltime>04:00:00</walltime>
+            <!-- <walltime>04:00:00</walltime>
+            <memory>64G</memory> -->
+            <walltime>00:30:00</walltime>
             <memory>64G</memory>
             <cores>1</cores>
             

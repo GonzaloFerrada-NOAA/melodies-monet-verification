@@ -90,10 +90,19 @@ for label, m in an.models.items():
     ren = {k: v for k, v in {"lat": "latitude", "lon": "longitude"}.items() if k in ds.variables}
     if ren:
         ds = ds.rename(ren)                     # lat/lon -> latitude/longitude
+
+    # Keep only the model variables mapped to obs in control.yaml (+ lat/lon if they
+    # are data variables). Must happen BEFORE expand_dims: on a non-dask dataset
+    # expand_dims reads every variable it touches into memory.
+    mapping = an.control_dict['model'][label]['mapping']          # {obs_label: {modvar: obsvar}}
+    mapped = [v for pairs in mapping.values() for v in pairs]      # model var names
+    keep = mapped + [c for c in ("latitude", "longitude") if c in ds.data_vars]
+    ds = ds[keep]                               # coordinates are kept automatically
+
     if "z" not in ds.dims:
-        ds = ds.expand_dims("z", axis=1)        # (time,y,x) -> (time,z,y,x), size-1 z (lazy, no copy)
+        ds = ds.expand_dims("z", axis=1)        # (time,y,x) -> (time,z,y,x); loads only `keep`
     m.obj = ds
-    print(f"MONET-ready: {label} dims={dict(ds.sizes)}")
+    print(f"MONET-ready: {label} vars={keep} dims={dict(ds.sizes)}")
 
 #All the info in the analysis class can also be called.
 print(an.start_time)

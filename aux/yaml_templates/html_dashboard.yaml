@@ -49,21 +49,17 @@ pages:
     type: stations
     variables: [AOD 550 nm]
     default: AOD 550 nm
+  metar:
+    label: METAR
+    type: stations
+    variables: [2-m temperature, 2-m dew-point, Wind speed, Wind direction, 1-hr acc. precip., Visibility]
+    default: 2-m temperature
   openaq:
     label: OpenAQ
     type: stations
     variables: [PM2.5, PM10, Ozone, NO2, CO]
     default: PM2.5
-  ish:
-    label: ISH
-    type: stations
-    variables: [Visibility, Ceiling]
-    default: Visibility
-  ish-lite:
-    label: ISH-lite
-    type: stations
-    variables: [2-m temperature, Dew point temperature, Wind direction, Wind Speed, 1-hr accumulated precipitation]
-    default: 2-m temperature
+  # ish / ish-lite: datasets discontinued, replaced by metar
   viirs-models-bias:             # model vs. satellite: Variable = AOD 550 nm; Experiments: one at a time
     label: VIIRS
     type: aod_bias
@@ -74,7 +70,7 @@ pages:
     type: aod_bias
     dataset: tempo
     obs_label: TEMPO
-  # metar, rave, ngfs: no reader yet (add a builder in generate_website.py)
+  # rave, ngfs: no reader yet (add a builder in generate_website.py)
 
 # --------------------------------------------------------------------------
 # Reference observations (left panel + layer control, top right): shown over any
@@ -117,12 +113,12 @@ species_aliases:
   CO: CO
   TEMP: 2-m temperature
   aod_550nm: AOD 550 nm
-  temp: 2-m temperature
-  dew_pt_temp: Dew point temperature
-  wdir: Wind direction
-  ws: Wind Speed
-  precip_1hr: 1-hr accumulated precipitation
-  vsb: Visibility
+  temperature: 2-m temperature
+  dewpoint: 2-m dew-point
+  windSpeed: Wind speed
+  windDir: Wind direction
+  precip1Hour: 1-hr acc. precip.
+  visibility: Visibility
   ceiling: Ceiling
 
 # --------------------------------------------------------------------------
@@ -194,10 +190,10 @@ decimals:
   Ozone: 1
   CO: 0
   2-m temperature: 1
-  Dew point temperature: 1
+  2-m dew-point: 1
   Wind direction: 0
-  Wind Speed: 1
-  1-hr accumulated precipitation: 2
+  Wind speed: 1
+  1-hr acc. precip.: 2
   Visibility: 1
   Ceiling: 0
 
@@ -274,7 +270,11 @@ color_scales:
       bounds: [-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
       colors: ["#E6E6FA", "#BBC3F0", "#5781F7", "#1692F5", "#23DDF5", "#2CCFA6", "#22E215",
                "#A7FA0A", "#F1DE22", "#FC9E18", "#F96019", "#E61F5C", "#F76DD6"]
-    1-hr accumulated precipitation:
+    2-m dew-point:
+      bounds: [-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
+      colors: ["#E6E6FA", "#BBC3F0", "#5781F7", "#1692F5", "#23DDF5", "#2CCFA6", "#22E215",
+               "#A7FA0A", "#F1DE22", "#FC9E18", "#F96019", "#E61F5C", "#F76DD6"]
+    1-hr acc. precip.:
       bounds: [0, 0.25, 0.5, 1, 2, 4, 6, 10, 15, 25]
       colors: ["#FFFFFF", "#C7E9C0", "#A1D99B", "#74C476", "#31A354", "#006D2C",
                "#FED976", "#FD8D3C", "#E31A1C", "#800026"]
@@ -307,9 +307,9 @@ variables:
   Ozone: ppb
   CO: ppb
   2-m temperature: °C
-  Dew point temperature: °C
+  2-m dew-point: °C
   Wind direction: °
-  Wind Speed: m/s
-  1-hr accumulated precipitation: mm
-  Visibility: m
+  Wind speed: m/s
+  1-hr acc. precip.: mm
+  Visibility: mi                 # obs scaled m -> mi by MELODIES-MONET (unit_scale); model vis is in miles
   Ceiling: m

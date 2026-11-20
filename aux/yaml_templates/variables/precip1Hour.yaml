@@ -1,5 +1,4 @@
-      precip_1hr:
-        nan_value: -1.0
+      precip1Hour:
         ylabel_plot: 'Precipitation (mm)'
         vmin_plot: 0.0 #Opt
         vmax_plot: 10.0 #Opt

@@ -15,7 +15,7 @@ MAX_SIM_LENGTH=0
 EXPERIMENTS=( )
 FILES_EXPERIMENTS=( )
 
-while IFS= read -r EXP; do
+while IFS= read -r EXP <&3; do
     
     FILE_AOD_MODEL="${OUTPUT_DIR}/model_data/aod_${DATASET}_regridded_${EXP}_${CDATE}.nc"
     FILE_OUT="${OUTPUT_DIR}/${DATASET}/aod_${DATASET}_${EXP}_${CDATE}.nc"
@@ -41,7 +41,7 @@ while IFS= read -r EXP; do
     FILES_EXPERIMENTS+=( "${FILE_OUT}" )
     
     
-done < <(yaml_experiments "${YAML_EXPERIMENTS}")
+done 3< <(yaml_experiments "${YAML_EXPERIMENTS}")
 
 # Ready to plot
 DATE_END=$( date -ud "${CYCLE_DATE} ${MAX_SIM_LENGTH} hours" "+%F %T" )

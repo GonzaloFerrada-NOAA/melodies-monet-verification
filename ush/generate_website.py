@@ -111,10 +111,29 @@ def write_atomic(path, text):
 
 
 # ---- Experiments: names from the command line, details from experiments.yaml ----
-xyaml = {}
+def species_maps(path):
+    """experiments.yaml -> {exp: {obs name (lower case): model var}}. Read from the YAML node
+    tree so a model variable listed more than once under 'species' (t2m: "TEMP" and
+    t2m: "temperature") keeps every obs name; yaml.safe_load keeps only the last one."""
+    with open(path) as f:
+        root = yaml.compose(f)
+    out = {}
+    if not isinstance(root, yaml.MappingNode):
+        return out
+    for knode, vnode in root.value:                      # one entry per experiment
+        if not isinstance(vnode, yaml.MappingNode):
+            continue
+        for k2, v2 in vnode.value:
+            if k2.value == "species" and isinstance(v2, yaml.MappingNode):
+                out[str(knode.value)] = {str(o.value).lower(): str(m.value) for m, o in v2.value}
+    return out
+
+
+xyaml, SPC = {}, {}
 if ARGS.experiments_yaml:
     with open(ARGS.experiments_yaml) as f:
-        xyaml = yaml.safe_load(f) or {}
+        xyaml = yaml.safe_load(f) or {}                   # scalars (output_interval_hr, ...)
+    SPC = species_maps(ARGS.experiments_yaml)             # species mapping, duplicates kept
 ecfg = cfg.get("experiments") or {}
 palette = EXP_COLORS + list(ecfg.get("fallback_colors") or [])
 labels = ecfg.get("labels") or {}
@@ -129,7 +148,7 @@ for k, name in enumerate(ARGS.experiments):
         # hours between model outputs: where its lines break
         "every": int(x.get("output_interval_hr") or ecfg.get("default_output_hours", 1)),
         # obs species (lower case) -> model variable, to find the model column in the paired files
-        "species": {str(obs).lower(): str(mod) for mod, obs in (x.get("species") or {}).items()},
+        "species": SPC.get(name, {}),
     })
 OBS_STYLE = ecfg.get("observation") or {}
 OBSERVATION = {"label": OBS_STYLE.get("label", "Observation"), "color": OBS_STYLE.get("color", "#000000")}

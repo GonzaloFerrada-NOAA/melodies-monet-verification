@@ -1,3 +1,2 @@
-      dew_pt_temp:
-        nan_value: -1.0
+      dewpoint:
         ylabel_plot: 'Dew Point Temperature (C)'
