@@ -1,24 +1,24 @@
-RRFSv1-RT:
-  raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/grib2/rrfs.{init?fmt=%Y%m%d}/{init?fmt=%H}'
-  raw_output_filenames: 'rrfs.t{init?fmt=%H}z.2dfld.3km.f{lead?fmt=%3H}.na.grib2'
-  raw_output_format: 'grib2'  # 'grib2' or 'netcdf'
-  model_name: 'RRFS-SD' # 'RRFS-SD' 'cheMPAS-Fire' 'FWx-nest' 'HRRR-Smoke' 'MPAS-Aerosols' 'GEFS-Aerosols' 'UFS-Chem'
+CMF-netcdf:
+  raw_output_directory: '/scratch3/BMC/acomp/Gonzalo.Ferrada/cmf-dev/opsroot/vectorization/stmp/{init?fmt=%Y%m%d}/rrfs_mpassit_{init?fmt=%H}_v2.1.4/det'
+  raw_output_filenames: 'mpassit.{valid?fmt=%Y-%m-%d_%H}.00.00.nc'
+  raw_output_format: 'netcdf'  # 'grib2' or 'netcdf'
+  model_name: 'CMF' # 'RRFS-SD' or 'CMF'
   model_type: 'standard' # 'standard', 'rrfs', 'ufs', 'wrfchem'
   initialization_hr: 0
-  simulation_length_hr: 60
+  simulation_length_hr: 24
   output_interval_hr: 1
-  relative_day_to_obs: 0 # if retro, then 0
+  relative_day_to_obs: 0 # 0 if retro run
   # Plot line settings:
   color: 'red'
   marker: '.'
   linestyle: '-'
   markersize: 8
   linewidth: 1.5
-  # species mapping [name in model] : [key name in melodies-monet]
+  # species mapping [name in aqm file] : [key name in melodies-monet]
   species:
     aod550: "aod_550nm"
     pm25: "PM2.5"
-    pm10: "PM10"
+    # pm10: "PM10"
     t2m: "TEMP"
     t2m: "temperature"
     td2m: "dewpoint"
@@ -26,32 +26,90 @@ RRFSv1-RT:
     wd: "windDir"
     pp1h: "precip1Hour"
     vis: "visibility"
-    ceiling: "ceiling"
     
-RRFSv1-wEnhMix:
-  raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/stmp/{init?fmt=%Y%m%d%H}/fcst_fv3lam'
-  raw_output_filenames: 'dynf{lead?fmt=%3H}.nc phyf{lead?fmt=%3H}.nc'
-  raw_output_format: 'netcdf'  # 'grib2' or 'netcdf'
-  model_name: 'RRFS-SD' # 'RRFS-SD' 'cheMPAS-Fire' 'FWx-nest' 'HRRR-Smoke' 'MPAS-Aerosols' 'GEFS-Aerosols' 'UFS-Chem'
-  model_type: 'standard' # 'standard', 'rrfs', 'ufs', 'wrfchem'
-  initialization_hr: 0
-  simulation_length_hr: 72
-  output_interval_hr: 1
-  relative_day_to_obs: 0 # if retro, then 0
-  # Plot line settings:
-  color: 'blue'
-  marker: '.'
-  linestyle: '-'
-  markersize: 8
-  linewidth: 1.5
-  # species mapping [name in model] : [key name in melodies-monet]
-  species:
-    aod550: "aod_550nm"
-    pm25: "PM2.5"
-    pm10: "PM10"
-    t2m: "TEMP"
-    t2m: "temperature"
-    td2m: "dewpoint"
-    ws: "windSpeed"
-    wd: "windDir"
-    pp1h: "precip1Hour"
+# CMF-grib2: 
+#   raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/grib2/rrfs.{init?fmt=%Y%m%d}/{init?fmt=%H}/upp/det'
+#   raw_output_filenames: 'rrfs.t00z.natlev.f{lead?fmt=%3H}.conus.grib2'
+#   raw_output_format: 'grib2'  # 'grib2' or 'netcdf'
+#   model_name: 'CMF' # 'RRFS-SD' or 'CMF'
+#   model_type: 'standard' # 'standard', 'rrfs', 'ufs', 'wrfchem'
+#   initialization_hr: 0
+#   simulation_length_hr: 24
+#   output_interval_hr: 1
+#   relative_day_to_obs: 0 # if retro, then 0
+#   # Plot line settings:
+#   color: 'blue'
+#   marker: '.'
+#   linestyle: '-'
+#   markersize: 8
+#   linewidth: 1.5
+#   # species mapping [name in aqm file] : [key name in melodies-monet]
+#   species:
+#     aod550: "aod_550nm"
+#     pm25: "PM2.5"
+#     pm10: "PM10"
+#     t2m: "TEMP"
+#     t2m: "temperature"
+#     td2m: "dewpoint"
+#     ws: "windSpeed"
+#     wd: "windDir"
+#     pp1h: "precip1Hour"
+#     vis: "visibility"
+
+# RRFSv1-RT:
+#   raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/grib2/rrfs.{init?fmt=%Y%m%d}/{init?fmt=%H}'
+#   raw_output_filenames: 'rrfs.t{init?fmt=%H}z.2dfld.3km.f{lead?fmt=%3H}.na.grib2'
+#   raw_output_format: 'grib2'  # 'grib2' or 'netcdf'
+#   model_name: 'RRFS-SD' # 'RRFS-SD' or 'CMF'
+#   model_type: 'standard' # 'standard', 'rrfs', 'ufs', 'wrfchem'
+#   initialization_hr: 0
+#   simulation_length_hr: 60
+#   output_interval_hr: 1
+#   relative_day_to_obs: 0 # if retro, then 0
+#   # Plot line settings:
+#   color: 'red'
+#   marker: '.'
+#   linestyle: '-'
+#   markersize: 8
+#   linewidth: 1.5
+#   # species mapping [name in aqm file] : [key name in melodies-monet]
+#   species:
+#     aod550: "aod_550nm"
+#     pm25: "PM2.5"
+#     pm10: "PM10"
+#     t2m: "TEMP"
+#     t2m: "temperature"
+#     td2m: "dewpoint"
+#     ws: "windSpeed"
+#     wd: "windDir"
+#     pp1h: "precip1Hour"
+#     vis: "visibility"
+#     ceiling: "ceiling"
+    
+# RRFSv1-wEnhMix:
+#   raw_output_directory: '/scratch4/BMC/acomp/Gonzalo.Ferrada/tmp/stmp/{init?fmt=%Y%m%d%H}/fcst_fv3lam'
+#   raw_output_filenames: 'dynf{lead?fmt=%3H}.nc phyf{lead?fmt=%3H}.nc'
+#   raw_output_format: 'netcdf'  # 'grib2' or 'netcdf'
+#   model_name: 'RRFS-SD' # 'RRFS-SD' or 'CMF'
+#   model_type: 'standard' # 'standard', 'rrfs', 'ufs', 'wrfchem'
+#   initialization_hr: 0
+#   simulation_length_hr: 72
+#   output_interval_hr: 1
+#   relative_day_to_obs: 0 # if retro, then 0
+#   # Plot line settings:
+#   color: 'blue'
+#   marker: '.'
+#   linestyle: '-'
+#   markersize: 8
+#   linewidth: 1.5
+#   # species mapping [name in aqm file] : [key name in melodies-monet]
+#   species:
+#     aod550: "aod_550nm"
+#     pm25: "PM2.5"
+#     pm10: "PM10"
+#     t2m: "TEMP"
+#     t2m: "temperature"
+#     td2m: "dewpoint"
+#     ws: "windSpeed"
+#     wd: "windDir"
+#     pp1h: "precip1Hour"

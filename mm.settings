@@ -46,8 +46,10 @@ source "${TOOLS_DIR}/yaml_helpers.sh"
 : "${CDATE:?CDATE not set (expected YYYYMMDDHH)}"
 set_date_vars "${CDATE}"        # YYYYMMDD, YYYY, YY, MM, DD, HH, JJJ, CYCLE_DATE
 
-# ---- Options ----
+# ---- melodies-monet options ----
 _mm_default VIIRS_PLOT_INCLUDE_COLORBAR true
+MELODIES_MONET_MAKE_PLOTS = false # if true, the melodies-monet task will make spatial, line, timeseries PNG (more time consuming)
+                                 # set to false if you're only interested on producing the interactive website.
 
 # ---- Modules (load BEFORE set -x, or Lmod floods the log with trace lines) ----
 # Batch shells may not have the `module` function defined; initialize it if missing
@@ -70,8 +72,7 @@ conda activate "${CONDA_ENV}"
 
 unset -f _mm_default                         # don't leak the helper into the caller
 
-# ---- Workflow settings ----
-MELODIES_MONET_MAKE_PLOTS = false
+
 
 # ---- Shell behavior for the calling task script ----
 set -e                                            # exit on first failing command

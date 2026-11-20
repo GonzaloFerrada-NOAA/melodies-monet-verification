@@ -34,8 +34,9 @@ run_root="${RUN_DIR}/${platform}/${CDATE}"  # scratch (per cycle: safe for concu
 TEMPLATE_DIR="${YAML_DIR}"
 MODEL_OUTPUT_DIR="${OUTPUT_DIR}/model_data"
 
-# PLOT_TYPES=( "ts_regional" "spatial_overlay" "spatial_bias" "boxplot" "taylor" "scorecard" "csi" "stats" )
-PLOT_TYPES=( "stats" )
+PLOT_TYPES=("stats")
+[[ ${MELODIES_MONET_MAKE_PLOTS} == "true" ]] && PLOT_TYPES=("stats" "ts_regional" "spatial_overlay" "spatial_bias" "boxplot" "taylor" "scorecard" "csi")
+[[ ${DATASET} == "metar" ]] && PLOT_TYPES=( "stats" )
 
 # Species evaluated for each platform (obs names, as in the obs/variables templates)
 case ${platform} in

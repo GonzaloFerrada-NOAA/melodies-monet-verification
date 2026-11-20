@@ -21,6 +21,8 @@ Recipe format (see aux/recipes/*.yaml):
   lon: lon
   output_format: NETCDF4           # NETCDF4, NETCDF4_CLASSIC, NETCDF3_64BIT, NETCDF3_CLASSIC
   chunks: {pfull: 1}               # optional: stream 3-D fields level by level (dask)
+  time_dim: Time                   # optional: record dim to rename to 'time' (WRF-like files)
+  time: XTIME                      # optional: variable holding the valid time (WRF-like files)
   variables:
     name: "python/xarray expression"
     name: {expr: "...", units: "...", long_name: "..."}
@@ -176,6 +178,8 @@ def evaluate(source, recipe, species, time=None):
 
     lat = source[recipe.get("lat", "lat")].reset_coords(drop=True)
     lon = source[recipe.get("lon", "lon")].reset_coords(drop=True)
+    if "time" in lat.dims:                   # WRF-like XLAT(Time,y,x): grid is time-invariant
+        lat, lon = lat.isel(time=0), lon.isel(time=0)
     return standardize_grid(out, lat, lon)
 
 
@@ -205,8 +209,8 @@ def standardize_grid(out, lat, lon):
         out = out.rename_dims(to_rename)
     lat_dims = tuple(ren[d] for d in lat.dims)
     lon_dims = tuple(ren[d] for d in lon.dims)
-    out = out.assign_coords(lat=(lat_dims, lat.values, LAT_ATTRS),
-                            lon=(lon_dims, lon.values, LON_ATTRS))
+    out = out.assign_coords(lat=(lat_dims, lat.values.astype("float64"), LAT_ATTRS),   # double, all models
+                            lon=(lon_dims, lon.values.astype("float64"), LON_ATTRS))
     for c in ("lat", "lon"):
         out[c].encoding = {"_FillValue": None}       # no fill value on coordinates
     return out
@@ -249,6 +253,24 @@ def main():
     # decode_times=False: keep time as numbers + units (avoids JULIAN cftime objects)
     dsets = [xr.open_dataset(f, chunks=chunks, decode_times=False) for f in a.inputs]
     ds = xr.merge(dsets, compat="override", join="override", combine_attrs="override")
+
+    # WRF-like files (e.g. MPASSIT): record dim 'Time' has no coordinate; the valid
+    # time lives in another variable (XTIME). Rename the dim and attach the coordinate.
+    tdim, tvar = recipe.get("time_dim"), recipe.get("time")
+    if tdim and tdim in ds.dims and tdim != "time":
+        ds = ds.rename_dims({tdim: "time"})
+    if tvar and tvar in ds.variables:
+        # WRF writes 'minutes since 2024-05-12_00:00:00'; CF/cdo need a space
+        units = ds[tvar].attrs.get("units", "").replace("_", " ")
+        # MPASSIT writes XTIME with the wrong sign (0, -60, -120, ...). Forecast valid
+        # times never precede the start date, so use the magnitude (also correct if
+        # a future MPASSIT version fixes the sign).
+        t = abs(ds[tvar].variable.astype("float64"))
+        if units.startswith("minutes since"):        # standard frames use hours
+            t = t / 60.0
+            units = "hours" + units[len("minutes"):]
+        t.attrs = {"units": units}
+        ds = ds.assign_coords(time=t)
 
     # All raw variables needed must exist in the inputs (cheap: metadata only)
     absent = sorted(n for n in raw_names_needed(recipe, a.species) if n not in ds.variables)

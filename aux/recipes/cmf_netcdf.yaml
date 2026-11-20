@@ -1,0 +1,77 @@
+# Recipe: cheMPAS-Fire (CMF) output post-processed by MPASSIT (WRF-like netCDF,
+#         one file per valid time: mpassit.YYYY-MM-DD_HH.00.00.nc)
+#
+# Each entry:   name: expression
+#          or   name: {expr: expression, units: ..., long_name: ...}
+# Expressions are Python/xarray; 'np' is available. Names refer to raw variables
+# in the input file or to other entries here. Entries are computed only when
+# a requested species needs them.
+# Species names (keys of 'species' in experiments.yaml) must exist here.
+#
+# WRF/MPAS 'bottom_top' runs bottom -> top, so isel(bottom_top=0) is the lowest
+# model layer (opposite of FV3 'pfull').
+# MPAS winds (U10, U10MEAN, ...) are already earth-relative (zonal/meridional),
+# so no rotation with SINALPHA/COSALPHA is needed.
+
+lat: XLAT                 # (Time, south_north, west_east) -> first time used; dims become y, x
+lon: XLONG
+time_dim: Time            # WRF-like record dim, renamed to 'time'
+time: XTIME               # valid time ("minutes since <start>"), used as the time coordinate
+output_format: NETCDF3_64BIT
+chunks: {bottom_top: 1}   # read 3-D fields one level at a time (low memory)
+
+variables:
+  # ---------------- helpers ----------------
+  # 2-m vapor pressure from specific humidity and surface pressure:
+  #   e = q p / (eps + (1 - eps) q),  eps = Rd/Rv = 0.622      [Pa]
+  # (q floored at 1e-10 kg/kg so log() below never sees zero)
+  e2m:
+    expr: np.maximum(Q2, 1.e-10) * PSFC / (0.622 + 0.378 * np.maximum(Q2, 1.e-10))
+    units: Pa
+  lne2m: np.log(e2m / 611.2)       # ln(e / es0), es0 = 611.2 Pa (Bolton 1980)
+
+  # ---------------- species ----------------
+  aod550:
+    expr: AOD550
+    units: "1"
+    long_name: aerosol optical depth at 550 nm
+  aod550_simple:
+    expr: AOD550_SIMPLE
+    units: "1"
+    long_name: aerosol optical depth at 550 nm (simple)
+  pm25:
+    expr: PM2_5.isel(bottom_top=0)       # PM2_5 is 3-D (already ug m-3); take lowest layer
+    units: ug m-3
+    long_name: surface PM2.5
+  # pm10:       # if you ran smoke only then you don't have PM10
+  #   expr: PM10.isel(bottom_top=0)
+  #   units: ug m-3
+  #   long_name: surface PM10
+  t2m:
+    expr: T2 - 273.15
+    units: degC
+    long_name: 2-m temperature
+  td2m:
+    # Inverse of Bolton (1980) es(T) = 611.2 exp(17.67 T / (T + 243.5)), T in degC
+    expr: 243.5 * lne2m / (17.67 - lne2m)
+    units: degC
+    long_name: 2-m dew point temperature
+  ws:
+    expr: (U10MEAN**2 + V10MEAN**2)**0.5
+    units: m s-1
+    long_name: 10-m wind speed
+  wd:
+    expr: 180.0 + np.degrees(np.arctan2(U10MEAN, V10MEAN))   # direction FROM
+    units: degree
+    long_name: 10-m wind direction
+  vis:
+    expr: (0.000621371 * VIS).clip(max=10.0)
+    units: miles
+    long_name: visibility
+  pp1h:
+    # PREC_ACC_* accumulate over PREC_ACC_DT = 60 min (global attribute), so their
+    # sum is already the 1-h total. Convective part is all fill (-> NaN) when no
+    # cumulus scheme is used, so treat it as 0; grid-scale NaN stays NaN.
+    expr: PREC_ACC_NC + PREC_ACC_C.fillna(0.0)
+    units: mm
+    long_name: 1-hr precipitation

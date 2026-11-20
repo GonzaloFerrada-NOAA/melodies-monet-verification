@@ -31,10 +31,10 @@ if [[ -z ${recipe} ]]; then
   shopt -s nocasematch                                # case insensitive
   case "${model_name}" in
     rrfs-sd|rrfs|rrfsv1)                                    base=rrfs-sd ;;
-    mpas-aerosols|chempas-fire|cmf|fire-weather-nest|fwx-nest|fwxnest) base=mpas ;;
-    hrrr-smoke)                                             base=hrrr-smoke ;;
-    gefs-aerosols|gcafs|ufs-aerosols)                       base=gefs-aerosols ;;
-    rap-smoke|rap-chem)                                     base=rap-chem ;;
+    mpas-aerosols|chempas-fire|cmf|fire-weather-nest|fwx-nest|fwxnest) base=cmf ;;
+    # hrrr-smoke)                                             base=hrrr-smoke ;;
+    # gefs-aerosols|gcafs|ufs-aerosols)                       base=gefs-aerosols ;;
+    # rap-smoke|rap-chem)                                     base=rap-chem ;;
     *) echo "ERROR: model_name='${model_name}' not supported." >&2; exit 1 ;;
   esac
   shopt -u nocasematch
